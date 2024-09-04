@@ -44,7 +44,7 @@ public class UserController {
   @GetMapping("/insert")
   public String insert() {
     jdbc.execute(
-        "INSERT INTO Persons (PersonID, LastName, FirstName, Address, City) VALUES(5, 'New', 'Entry', 'New home', 'UBC');");
+        "INSERT INTO Persons (PersonID, LastName, FirstName, Address, City) VALUES(6, 'fakjl;adsfjalsk', 'Entry', 'New home', 'UBC');");
     return "data inserted Successfully";
   }
 
