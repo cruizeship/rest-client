@@ -40,5 +40,5 @@ jobs:
         script: |
           docker pull andrewc37/test-image
           docker stop spring-app || true
-          docker rm spring-app || true
+          docker rm -f spring-app || true
           docker run -d -p 8080:8080 --name spring-app andrewc37/test-image
