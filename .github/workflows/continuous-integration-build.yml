@@ -41,5 +41,4 @@ jobs:
           docker pull andrewc37/test-image
           docker stop spring-app || true
           docker rm spring-app || true
-          sleep 5
           docker run -d -p 8080:8080 --name spring-app andrewc37/test-image
