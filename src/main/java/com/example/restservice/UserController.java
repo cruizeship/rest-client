@@ -51,12 +51,26 @@ public class UserController {
     return "data inserted Successfully";
   }
 
+  // @GetMapping("/insertquest")
+  // public String insertQuest() {
+  //   jdbc.execute(
+  //     "INSERT INTO Quests (title, description, city, coordinates, creator_id) VALUES ('Quest Title 2', 'Description here', 'CityName', ST_GeomFromText('POINT(0 0)'), 123);");  
+  //   return "data inserted Successfully";
+  // }
+
   @GetMapping("/insertquest")
-  public String insertQuest() {
-    jdbc.execute(
-      "INSERT INTO Quests (title, description, city, coordinates, creator_id) VALUES ('Quest Title 2', 'Description here', 'CityName', ST_GeomFromText('POINT(0 0)'), 123);");  
-    return "data inserted Successfully";
-  }
+  public String insertQuest(
+            @RequestParam(value = "title") String title,
+            @RequestParam(value = "description") String description,
+            @RequestParam(value = "city") String city,
+            @RequestParam(value = "location") String location,
+            @RequestParam(value = "creatorId") String creatorId,
+            @RequestParam(value = "time") String time) {
+        
+        // Processing logic here
+        return String.format("Quest Title: %s, Description: %s, City: %s, Location: %s, Creator ID: %s, Time: %s",
+                title, description, city, location, creatorId, time);
+    }
 
   @GetMapping("/getall")
   public List<Map<String, Object>> getall() {
