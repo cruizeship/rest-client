@@ -2,7 +2,7 @@
 1. Clone repo
 2. Download maven (use homebrew on mac)
 
-## Starting the dev server 
+## Starting the Backend 
 ### `mvn spring-boot:run`
 
-Runs the backend at localhost:8080
+Runs the backend at [localhost:8080](http://localhost:8080)
