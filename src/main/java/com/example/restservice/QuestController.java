@@ -20,36 +20,19 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class UserController {
+public class QuestController {
 
-  UserList a = new UserList();
   @Autowired
   JdbcTemplate jdbc;
 
-  @GetMapping("/getuser")
-  public User getuser(@RequestParam(value = "username") String username) {
-    return a.getUser(username);
-  }
-
-  @GetMapping("/getuserlist")
-  public String getuserlist() {
-    System.out.println("getting list");
-    return "User List: " + a.toString();
-  }
-
+  /*
   @PostMapping("/adduser")
   public void adduser(@RequestParam(value = "id") long id, @RequestParam(value = "username") String username,
       @RequestParam(value = "value") long value) {
     System.out.println("tyring to add");
     a.addUser(new User(id, username, value));
   }
-
-  @GetMapping("/insert")
-  public String insert() {
-    jdbc.execute(
-        "INSERT INTO Persons (PersonID, LastName, FirstName, Address, City) VALUES(8, 'testing new instance', 'Entry', 'New home', 'UCLA');");
-    return "data inserted Successfully";
-  }
+  */
 
   // @GetMapping("/insertquest")
   // public String insertQuest() {
