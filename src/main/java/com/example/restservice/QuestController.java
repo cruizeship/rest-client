@@ -134,61 +134,62 @@ public class QuestController {
 
   public String formatPoint(String point) {
     if (point != null && point.startsWith("POINT(") && point.endsWith(")")) {
-        String content = point.substring(6, point.length() - 1); // Remove 'POINT(' and ')'
-        String[] parts = content.split(" ");
-        if (parts.length == 2) {
-            return "Longitude: " + parts[1] + ", Latitude: " + parts[0];
-        }
+      String content = point.substring(6, point.length() - 1); // Remove 'POINT(' and ')'
+      String[] parts = content.split(" ");
+      if (parts.length == 2) {
+        return "Longitude: " + parts[1] + ", Latitude: " + parts[0];
+      }
     }
     return point;
-}
+  }
 
   @PostMapping("/getquestsbydistance")
-    public List<Map<String, Object>> getQuestsByDistance(@RequestBody DistanceRequest request) {
-      
-      double latitude = request.getLatitude();
-      double longitude = request.getLongitude();
-      double radiusMiles = request.getRadius();
-      double radiusKm = radiusMiles * 1.60934;
+  public List<Map<String, Object>> getQuestsByDistance(@RequestBody Request request) {
 
-      // Calculate latitude and longitude offsets
-      double latOffset = radiusKm / 111.0;
-      double lonOffset = radiusKm / (111.0 * Math.cos(Math.toRadians(latitude)));
+    double latitude = request.getLatitude();
+    double longitude = request.getLongitude();
+    double radiusMiles = request.getRadius();
+    double radiusKm = radiusMiles * 1.60934;
 
-      // Bounding box coordinates
-      double minLat = latitude - latOffset;
-      double maxLat = latitude + latOffset;
-      double minLon = longitude - lonOffset;
-      double maxLon = longitude + lonOffset;
+    // Calculate latitude and longitude offsets
+    double latOffset = radiusKm / 111.0;
+    double lonOffset = radiusKm / (111.0 * Math.cos(Math.toRadians(latitude)));
 
-      // Format coordinates to 4 decimal places
-      DecimalFormat df = new DecimalFormat("0.####");
+    // Bounding box coordinates
+    double minLat = latitude - latOffset;
+    double maxLat = latitude + latOffset;
+    double minLon = longitude - lonOffset;
+    double maxLon = longitude + lonOffset;
 
-      // Generate SQL query
-      String sqlQuery = String.format(
-          "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `schema`.`Quests` " +
-          "WHERE MBRContains(" +
-          "    ST_GeomFromText('POLYGON((" +
-          "        %s %s," +  // Bottom-left corner
-          "        %s %s," +  // Bottom-right corner
-          "        %s %s," +  // Top-right corner
-          "        %s %s," +  // Top-left corner
-          "        %s %s))', 4326), " + // Closing the polygon
-          "    coordinates) " +
-          "AND ST_Distance_Sphere(" +
-          "    coordinates, " +
-          "    ST_GeomFromText('POINT(%s %s)', 4326)) " +
-          "<= %f",
-          df.format(minLat), df.format(minLon),  // Bottom-left
-          df.format(minLat), df.format(maxLon),  // Bottom-right
-          df.format(maxLat), df.format(maxLon),  // Top-right
-          df.format(maxLat), df.format(minLon),  // Top-left
-          df.format(minLat), df.format(minLon),  // Closing
-          df.format(latitude), df.format(longitude),  // Center point
-          radiusKm * 1000  // Convert radius to meters
-      );
+    // Format coordinates to 4 decimal places
+    DecimalFormat df = new DecimalFormat("0.####");
 
-      List<Map<String, Object>> results = jdbc.query(sqlQuery,
+    // Generate SQL query
+    String sqlQuery = String.format(
+        "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `schema`.`Quests` "
+            +
+            "WHERE MBRContains(" +
+            "    ST_GeomFromText('POLYGON((" +
+            "        %s %s," + // Bottom-left corner
+            "        %s %s," + // Bottom-right corner
+            "        %s %s," + // Top-right corner
+            "        %s %s," + // Top-left corner
+            "        %s %s))', 4326), " + // Closing the polygon
+            "    coordinates) " +
+            "AND ST_Distance_Sphere(" +
+            "    coordinates, " +
+            "    ST_GeomFromText('POINT(%s %s)', 4326)) " +
+            "<= %f",
+        df.format(minLat), df.format(minLon), // Bottom-left
+        df.format(minLat), df.format(maxLon), // Bottom-right
+        df.format(maxLat), df.format(maxLon), // Top-right
+        df.format(maxLat), df.format(minLon), // Top-left
+        df.format(minLat), df.format(minLon), // Closing
+        df.format(latitude), df.format(longitude), // Center point
+        radiusKm * 1000 // Convert radius to meters
+    );
+
+    List<Map<String, Object>> results = jdbc.query(sqlQuery,
         new RowMapper<Map<String, Object>>() {
           @Override
           public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -199,7 +200,8 @@ public class QuestController {
             String title = rs.getString("title") != null ? rs.getString("title") : "";
             String description = rs.getString("description") != null ? rs.getString("description") : "";
             String city = rs.getString("city") != null ? rs.getString("city") : "";
-            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format point
+            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format
+                                                                                                                      // point
             String tags = rs.getString("tags") != null ? rs.getString("tags") : ""; // Assuming JSON is returned as a
                                                                                     // string
             Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
@@ -219,7 +221,93 @@ public class QuestController {
           }
         });
 
-      return results;
+    return results;
+  }
+
+  @PostMapping("/getquestbyid")
+  public List<Map<String, Object>> getQuestById(@RequestBody Request request) {
+
+    double id = request.getId();
+
+    // Generate SQL query
+    String sqlQuery = "SELECT * FROM `schema`.`Quests` WHERE `id` = " + id;
+
+    List<Map<String, Object>> results = jdbc.query(sqlQuery,
+        new RowMapper<Map<String, Object>>() {
+          @Override
+          public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Map<String, Object> result = new HashMap<>();
+
+            // Null checking for all columns in Quests table
+            Integer id = rs.getObject("id") != null ? rs.getInt("id") : null;
+            String title = rs.getString("title") != null ? rs.getString("title") : "";
+            String description = rs.getString("description") != null ? rs.getString("description") : "";
+            String city = rs.getString("city") != null ? rs.getString("city") : "";
+            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format
+                                                                                                                      // point
+            String tags = rs.getString("tags") != null ? rs.getString("tags") : ""; // Assuming JSON is returned as a
+                                                                                    // string
+            Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
+            Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
+
+            // Populate the map with the checked values
+            result.put("id", id);
+            result.put("title", title);
+            result.put("description", description);
+            result.put("city", city);
+            result.put("coordinates", coordinates);
+            result.put("tags", tags);
+            result.put("creator_id", creatorId);
+            result.put("time", time != null ? time.toString() : null); // Converting Timestamp to String if needed
+
+            return result;
+          }
+        });
+
+    return results;
+  }
+
+  @PostMapping("/getquestsbycreator")
+  public List<Map<String, Object>> getQuestsByCreator(@RequestBody Request request) {
+
+    double creator_id = request.getCreatorId();
+
+    // Generate SQL query
+    String sqlQuery = "SELECT * FROM `schema`.`Quests` WHERE `creator_id` = " + creator_id;
+
+    List<Map<String, Object>> results = jdbc.query(sqlQuery,
+        new RowMapper<Map<String, Object>>() {
+          @Override
+          public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Map<String, Object> result = new HashMap<>();
+
+            // Null checking for all columns in Quests table
+            Integer id = rs.getObject("id") != null ? rs.getInt("id") : null;
+            String title = rs.getString("title") != null ? rs.getString("title") : "";
+            String description = rs.getString("description") != null ? rs.getString("description") : "";
+            String city = rs.getString("city") != null ? rs.getString("city") : "";
+            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format
+                                                                                                                      // point
+            String tags = rs.getString("tags") != null ? rs.getString("tags") : ""; // Assuming JSON is returned as a
+                                                                                    // string
+            Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
+            Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
+
+            // Populate the map with the checked values
+            result.put("id", id);
+            result.put("title", title);
+            result.put("description", description);
+            result.put("city", city);
+            result.put("coordinates", coordinates);
+            result.put("tags", tags);
+            result.put("creator_id", creatorId);
+            result.put("time", time != null ? time.toString() : null); // Converting Timestamp to String if needed
+
+            return result;
+          }
+        });
+
+    return results;
   }
 
 }
