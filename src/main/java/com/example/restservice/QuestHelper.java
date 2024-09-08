@@ -65,8 +65,6 @@ public class QuestHelper {
             Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
             Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
 
-            System.out.println(rs.getString("coordinates"));
-
             // Populate the map with the checked values
             result.put("id", id);
             result.put("title", title);
