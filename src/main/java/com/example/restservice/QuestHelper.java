@@ -2,11 +2,6 @@ package com.example.restservice;
 
 import org.springframework.jdbc.core.RowMapper;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -14,17 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.RestController;
-
-import org.springframework.web.bind.annotation.*;
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
 
 public class QuestHelper {
   public static double[] formatPoint(String point) {

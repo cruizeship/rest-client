@@ -5,25 +5,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.springframework.web.bind.annotation.*;
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 
 @RestController
 public class QuestController {
@@ -33,26 +22,6 @@ public class QuestController {
 
   String baseQuery = "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `schema`.`Quests`";
 
-  /*
-   * @PostMapping("/adduser")
-   * public void adduser(@RequestParam(value = "id") long id, @RequestParam(value
-   * = "username") String username,
-   * 
-   * @RequestParam(value = "value") long value) {
-   * System.out.println("tyring to add");
-   * a.addUser(new User(id, username, value));
-   * }
-   */
-
-  // @GetMapping("/insertquest")
-  // public String insertQuest() {
-  // jdbc.execute(
-  // "INSERT INTO Quests (title, description, city, coordinates, creator_id)
-  // VALUES ('Quest Title 2', 'Description here', 'CityName',
-  // ST_GeomFromText('POINT(0 0)'), 123);");
-  // return "data inserted Successfully";
-  // }
-
   @GetMapping("/getallquests")
   public List<Map<String, Object>> getAllQuests() {
     String sqlQuery = baseQuery;
@@ -61,7 +30,6 @@ public class QuestController {
 
     return results;
   }
-
 
   @PostMapping("/getquestsbydistance")
   public List<Map<String, Object>> getQuestsByDistance(@RequestBody Request request) {
@@ -136,6 +104,27 @@ public class QuestController {
     List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
 
     return results;
+  }
+
+  @PostMapping("/createquest")
+  public String createQuest(@RequestBody Request request) {
+
+    double latitude = request.getCoordinates()[1];
+    double longitude = request.getCoordinates()[0];
+    double creator_id = request.getCreatorId();
+    String city = request.getCity();
+    String description = request.getDescription();
+    String title = request.getTitle();
+    String tags = request.getTags();
+
+    String sqlQuery = String.format("INSERT INTO `schema`.`Quests` " +
+    "(`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`) " +
+    "VALUES ('%s', '%s', '%s', ST_GeomFromText('POINT(%f %f)', 4326), '%s', %f, NOW())",
+    title, description, city, latitude, longitude, tags, creator_id);
+
+    jdbc.execute(sqlQuery);
+
+    return sqlQuery;
   }
 
 }
