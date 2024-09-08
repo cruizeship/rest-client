@@ -6,7 +6,7 @@ public class Request {
 
   @JsonProperty("coordinates")
   private double[] coordinates;
-  
+
   @JsonProperty("radius")
   private double radius;
 
@@ -29,7 +29,7 @@ public class Request {
   private String time;
 
   @JsonProperty("tags")
-  private String tags;
+  private String[] tags;
 
   public double[] getCoordinates() {
     return coordinates;
@@ -95,11 +95,11 @@ public class Request {
     this.time = time;
   }
 
-  public String getTags() {
+  public String[] getTags() {
     return tags;
   }
 
-  public void setTags(String tags) {
+  public void setTags(String[] tags) {
     this.tags = tags;
   }
 }
