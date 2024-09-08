@@ -1,0 +1,76 @@
+package com.example.restservice;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.web.bind.annotation.*;
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+
+public class QuestHelper {
+  public static String formatPoint(String point) {
+    if (point != null && point.startsWith("POINT(") && point.endsWith(")")) {
+      String content = point.substring(6, point.length() - 1); // Remove 'POINT(' and ')'
+      String[] parts = content.split(" ");
+      if (parts.length == 2) {
+        return "Longitude: " + parts[1] + ", Latitude: " + parts[0];
+      }
+    }
+    return point;
+  }
+
+  public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {
+    return jdbc.query(sqlQuery,
+        new RowMapper<Map<String, Object>>() {
+          @Override
+          public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Map<String, Object> result = new HashMap<>();
+
+            // Null checking for all columns in Quests table
+            Integer id = rs.getObject("id") != null ? rs.getInt("id") : null;
+            String title = rs.getString("title") != null ? rs.getString("title") : "";
+            String description = rs.getString("description") != null ? rs.getString("description") : "";
+            String city = rs.getString("city") != null ? rs.getString("city") : "";
+            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format
+                                                                                                                      // point
+            String tags = rs.getString("tags") != null ? rs.getString("tags") : ""; // Assuming JSON is returned as a
+                                                                                    // string
+            Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
+            Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
+
+            System.out.println(rs.getString("coordinates"));
+
+            // Populate the map with the checked values
+            result.put("id", id);
+            result.put("title", title);
+            result.put("description", description);
+            result.put("city", city);
+            result.put("coordinates", coordinates);
+            result.put("tags", tags);
+            result.put("creator_id", creatorId);
+            result.put("time", time != null ? time.toString() : null); // Converting Timestamp to String if needed
+
+            return result;
+          }
+        });
+  }
+}
