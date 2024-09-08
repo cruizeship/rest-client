@@ -27,15 +27,23 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 public class QuestHelper {
-  public static String formatPoint(String point) {
+  public static double[] formatPoint(String point) {
     if (point != null && point.startsWith("POINT(") && point.endsWith(")")) {
       String content = point.substring(6, point.length() - 1); // Remove 'POINT(' and ')'
       String[] parts = content.split(" ");
       if (parts.length == 2) {
-        return "Longitude: " + parts[1] + ", Latitude: " + parts[0];
+        try {
+          double latitude = Double.parseDouble(parts[0]);
+          double longitude = Double.parseDouble(parts[1]);
+          return new double[] { longitude, latitude };
+        } catch (NumberFormatException e) {
+          // Handle the case where parsing fails
+          e.printStackTrace();
+        }
       }
     }
-    return point;
+    // Return an empty array if the format is incorrect or parsing fails
+    return new double[] {};
   }
 
   public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {
@@ -50,8 +58,8 @@ public class QuestHelper {
             String title = rs.getString("title") != null ? rs.getString("title") : "";
             String description = rs.getString("description") != null ? rs.getString("description") : "";
             String city = rs.getString("city") != null ? rs.getString("city") : "";
-            String coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates")) : ""; // Format
-                                                                                                                      // point
+            double[] coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates"))
+                : new double[0];
             String tags = rs.getString("tags") != null ? rs.getString("tags") : ""; // Assuming JSON is returned as a
                                                                                     // string
             Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;

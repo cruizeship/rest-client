@@ -66,8 +66,8 @@ public class QuestController {
   @PostMapping("/getquestsbydistance")
   public List<Map<String, Object>> getQuestsByDistance(@RequestBody Request request) {
 
-    double latitude = request.getLatitude();
-    double longitude = request.getLongitude();
+    double latitude = request.getCoordinates()[1];
+    double longitude = request.getCoordinates()[0];
     double radiusMiles = request.getRadius();
     double radiusKm = radiusMiles * 1.60934;
 

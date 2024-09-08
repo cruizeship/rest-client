@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Request {
 
-  @JsonProperty("latitude")
-  private double latitude;
-
-  @JsonProperty("longitude")
-  private double longitude;
+  @JsonProperty("coordinates")
+  private double[] coordinates; // Array to hold latitude and longitude
 
   @JsonProperty("radius")
   private double radius;
@@ -19,21 +16,12 @@ public class Request {
   @JsonProperty("creator_id")
   private int creator_id;
 
-  // Getters and setters
-  public double getLatitude() {
-    return latitude;
+  public double[] getCoordinates() {
+    return coordinates;
   }
 
-  public void setLatitude(double latitude) {
-    this.latitude = latitude;
-  }
-
-  public double getLongitude() {
-    return longitude;
-  }
-
-  public void setLongitude(double longitude) {
-    this.longitude = longitude;
+  public void setCoordinates(double[] coordinates) {
+    this.coordinates = coordinates;
   }
 
   public double getRadius() {
