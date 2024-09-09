@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Map;
-
-import java.text.DecimalFormat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,95 +46,67 @@ public class QuestController {
     return results;
   }
 
-  @PostMapping("/getquestsbydistance")
-  public List<Map<String, Object>> getQuestsByDistance(@RequestBody Request request) {
+  @PostMapping("/getquests")
+  public Object getQuests(@RequestBody Request request) {
+    String sqlQuery = baseQuery;
+    ArrayList<String> sqlAdd = new ArrayList<>();
+    try {
+      if (request.getId() != null) {
+        sqlAdd.add("`id` = '" + request.getId() + "'");
+      }
+      if (request.getTitle() != null) {
+        sqlAdd.add("`title` = '" + request.getTitle() + "'");
+      }
+      if (request.getCreator_id() != null) {
+        sqlAdd.add("`creator_id` = '" + request.getCreator_id() + "'");
+      }
+      if (request.getCoordinates() != null) {
+        if (request.getRadius() != null) {
+          sqlAdd.add(QuestHelper.getQuestsByDistance(request));
+        }
+      }
+      if (request.getCity() != null) {
+        sqlAdd.add("`city` = '" + request.getCity() + "'");
+      }
+      if (request.getTags() != null) {
+        for (String tag : request.getTags()) {
+          sqlAdd.add(String.format("JSON_CONTAINS(tags, '\"%s\"', '$')", tag));
+        }
+      }
 
-    double latitude = request.getCoordinates()[1];
-    double longitude = request.getCoordinates()[0];
-    double radiusMiles = request.getRadius();
-    double radiusKm = radiusMiles * 1.60934;
+      for (int i = 0; i < sqlAdd.size(); i++) {
+        if (i == 0) {
+          sqlQuery += " WHERE ";
+        } else {
+          sqlQuery += " AND ";
+        }
+        sqlQuery += sqlAdd.get(i);
+      }
+      sqlQuery += ";";
 
-    // Calculate latitude and longitude offsets
-    double latOffset = radiusKm / 111.0;
-    double lonOffset = radiusKm / (111.0 * Math.cos(Math.toRadians(latitude)));
+      List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
+      return results;
 
-    // Bounding box coordinates
-    double minLat = latitude - latOffset;
-    double maxLat = latitude + latOffset;
-    double minLon = longitude - lonOffset;
-    double maxLon = longitude + lonOffset;
-
-    // Format coordinates to 4 decimal places
-    DecimalFormat df = new DecimalFormat("0.####");
-
-    // Generate SQL query
-    String sqlQuery = String.format(
-        baseQuery + " WHERE MBRContains(" +
-            "    ST_GeomFromText('POLYGON((" +
-            "        %s %s," + // Bottom-left corner
-            "        %s %s," + // Bottom-right corner
-            "        %s %s," + // Top-right corner
-            "        %s %s," + // Top-left corner
-            "        %s %s))', 4326), " + // Closing the polygon
-            "    coordinates) " +
-            "AND ST_Distance_Sphere(" +
-            "    coordinates, " +
-            "    ST_GeomFromText('POINT(%s %s)', 4326)) " +
-            "<= %f",
-        df.format(minLat), df.format(minLon), // Bottom-left
-        df.format(minLat), df.format(maxLon), // Bottom-right
-        df.format(maxLat), df.format(maxLon), // Top-right
-        df.format(maxLat), df.format(minLon), // Top-left
-        df.format(minLat), df.format(minLon), // Closing
-        df.format(latitude), df.format(longitude), // Center point
-        radiusKm * 1000 // Convert radius to meters
-    );
-
-    List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
-
-    return results;
-  }
-
-  @PostMapping("/getquestbyid")
-  public List<Map<String, Object>> getQuestById(@RequestBody Request request) {
-
-    double id = request.getId();
-
-    // Generate SQL query
-    String sqlQuery = baseQuery + " WHERE `id` = " + id;
-
-    List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
-
-    return results;
-  }
-
-  @PostMapping("/getquestsbycreator")
-  public List<Map<String, Object>> getQuestsByCreator(@RequestBody Request request) {
-
-    double creator_id = request.getCreatorId();
-
-    // Generate SQL query
-    String sqlQuery = baseQuery + " WHERE `creator_id` = " + creator_id;
-
-    List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
-
-    return results;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return "Failed to query database: " + e.getMessage();
+    }
   }
 
   @PostMapping("/createquest")
-  public int createQuest(@RequestBody Request request) {
-
-    double latitude = request.getCoordinates()[1];
-    double longitude = request.getCoordinates()[0];
-    double creator_id = request.getCreatorId();
-    String city = request.getCity();
-    String description = request.getDescription();
-    String title = request.getTitle();
-    String[] tags = request.getTags();
+  public Object createQuest(@RequestBody Request request) {
 
     int id = -1;
-
+    
     try {
+      double latitude = request.getCoordinates()[1];
+      double longitude = request.getCoordinates()[0];
+      double creator_id = request.getCreator_id();
+      String city = request.getCity();
+      String description = request.getDescription();
+      String title = request.getTitle();
+      String[] tags = request.getTags();
+
       // Convert tags array to JSON string directly in SQL preparation
       String tagsJson = objectMapper.writeValueAsString(tags);
 
@@ -167,7 +138,10 @@ public class QuestController {
 
     } catch (Exception e) {
       e.printStackTrace();
+      return "Failed to add quest: " + e.getMessage();
+
     }
-    return id;
+
+    return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
   }
 }
