@@ -35,9 +35,7 @@ public class DatabaseController {
             ");";
     jdbc.execute(sqlQuery);
     sqlQuery = "ALTER TABLE `schema`.`Quests`\n" + //
-            "  MODIFY `coordinates` GEOMETRY NOT NULL SRID 4326,\n" + //
-            "  ADD `specific_tag` VARCHAR(255) GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(`tags`, '$[0]'))) VIRTUAL,\n" + //
-            "  ADD INDEX `specific_tag_idx` (`specific_tag`);";
+            "  MODIFY `coordinates` GEOMETRY NOT NULL SRID 4326;";
     jdbc.execute(sqlQuery);
     return "good";
   }
