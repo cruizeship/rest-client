@@ -14,8 +14,8 @@ public class DatabaseController {
   @Autowired
   JdbcTemplate jdbc;
 
-  @PostMapping("/resetdatabase")
-  public String resetDatabase() {
+  @PostMapping("/resetquests")
+  public String resetQuestDatabase() {
     String sqlQuery = "DROP TABLE IF EXISTS `schema`.`Quests`;";
     jdbc.execute(sqlQuery);
     sqlQuery = "CREATE TABLE `schema`.`Quests` (\n" + //
@@ -40,8 +40,8 @@ public class DatabaseController {
     return "good";
   }
 
-  @PostMapping("/initializedatabase")
-  public String initializeDatabase() {
+  @PostMapping("/initquests")
+  public String initializeQuestDatabase() {
     String sqlQuery = "INSERT INTO `schema`.`Quests` (`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`)\n" + //
             "VALUES\n" + //
             "  ('LA Adventure', 'Explore the streets of LA!', 'Los Angeles', ST_GeomFromText('POINT(34.0522 -118.2437)', 4326), '[\"adventure\", \"urban\", \"discovery\"]', 1, NOW()),\n" + //
