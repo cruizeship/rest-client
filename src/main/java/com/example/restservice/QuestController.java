@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.restservice.envConfig;
 
 @RestController
 public class QuestController {
@@ -35,7 +36,8 @@ public class QuestController {
   JdbcTemplate jdbc;
   ObjectMapper objectMapper = new ObjectMapper();
 
-  String baseQuery = "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `schema`.`Quests`";
+  String DB_NAME = envConfig.getDB_NAME();
+  String baseQuery = String.format("SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `%s`.`Quests`", DB_NAME);
 
   @GetMapping("/getallquests")
   public List<Map<String, Object>> getAllQuests() {
@@ -112,10 +114,10 @@ public class QuestController {
 
       // Generate SQL query
       String sqlQuery = String.format(
-          "INSERT INTO `schema`.`Quests` " +
+          "INSERT INTO `%s`.`Quests` " +
               "(`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`) " +
               "VALUES (?, ?, ?, ST_GeomFromText('POINT(%f %f)', 4326), ?, ?, NOW())",
-          latitude, longitude);
+          DB_NAME, latitude, longitude);
 
       // Use KeyHolder to retrieve the generated key
       KeyHolder keyHolder = new GeneratedKeyHolder();

@@ -7,18 +7,22 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.restservice.envConfig;
 
 @RestController
 public class DatabaseController {
+  
+  
+  String DB_NAME = envConfig.getDB_NAME();
 
   @Autowired
   JdbcTemplate jdbc;
 
   @PostMapping("/resetquests")
   public String resetQuestDatabase() {
-    String sqlQuery = "DROP TABLE IF EXISTS `schema`.`Quests`;";
+    String sqlQuery = String.format("DROP TABLE IF EXISTS `%s`.`Quests`;", DB_NAME);
     jdbc.execute(sqlQuery);
-    sqlQuery = "CREATE TABLE `schema`.`Quests` (\n" + //
+    sqlQuery = String.format("CREATE TABLE `%s`.`Quests` (\n" + //
             "  `id` INT NOT NULL AUTO_INCREMENT,\n" + //
             "  `title` VARCHAR(50) NOT NULL,\n" + //
             "  `description` VARCHAR(100) NOT NULL,\n" + //
@@ -32,17 +36,17 @@ public class DatabaseController {
             "  SPATIAL INDEX `coordinates_SPATIAL` (`coordinates`), -- Spatial index\n" + //
             "  INDEX `creator_id_idx` (`creator_id`),               -- Index for creator queries\n" + //
             "  INDEX `city_idx` (`city`)                            -- Index for city queries\n" + //
-            ");";
+            ");", DB_NAME);
     jdbc.execute(sqlQuery);
-    sqlQuery = "ALTER TABLE `schema`.`Quests`\n" + //
-            "  MODIFY `coordinates` GEOMETRY NOT NULL SRID 4326;";
+    sqlQuery = String.format("ALTER TABLE `%s`.`Quests`\n" + //
+            "  MODIFY `coordinates` GEOMETRY NOT NULL SRID 4326;", DB_NAME);
     jdbc.execute(sqlQuery);
     return "good";
   }
 
   @PostMapping("/initquests")
   public String initializeQuestDatabase() {
-    String sqlQuery = "INSERT INTO `schema`.`Quests` (`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`)\n" + //
+    String sqlQuery = String.format("INSERT INTO `%s`.`Quests` (`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`)\n" + //
             "VALUES\n" + //
             "  ('LA Adventure', 'Explore the streets of LA!', 'Los Angeles', ST_GeomFromText('POINT(34.0522 -118.2437)', 4326), '[\"adventure\", \"urban\", \"discovery\"]', 1, NOW()),\n" + //
             "  ('SD Beach Quest', 'Discover the hidden beaches of San Diego.', 'San Diego', ST_GeomFromText('POINT(32.7157 -117.1611)', 4326), '[\"beach\", \"water\", \"relaxation\"]', 2, NOW()),\n" + //
@@ -50,7 +54,7 @@ public class DatabaseController {
             "  ('Oakland Urban Exploration', 'A quest to uncover the history and culture of Oakland.', 'Oakland', ST_GeomFromText('POINT(37.8044 -122.2711)', 4326), '[\"culture\", \"history\", \"city\"]', 4, NOW()),\n" + //
             "  ('SF Golden Gate Challenge', 'Cross the iconic Golden Gate Bridge and explore San Francisco.', 'San Francisco', ST_GeomFromText('POINT(37.7749 -122.4194)', 4326), '[\"landmarks\", \"bridge\", \"city\"]', 5, NOW()),\n" + //
             "  ('Berkeley Campus Tour', 'Tour the famous UC Berkeley campus and surroundings.', 'Berkeley', ST_GeomFromText('POINT(37.8716 -122.2727)', 4326), '[\"education\", \"campus\", \"tour\"]', 6, NOW());\n" + //
-            "";
+            "", DB_NAME);
     jdbc.execute(sqlQuery);
     return "good";
   }
