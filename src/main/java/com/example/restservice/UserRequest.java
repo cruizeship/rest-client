@@ -9,7 +9,7 @@ import lombok.Setter;
 public class UserRequest {
 
   @JsonProperty("id")
-  private int id;
+  private Integer id;
 
   @JsonProperty("username")
   private String username;
@@ -21,7 +21,7 @@ public class UserRequest {
   private String password;
 
   @JsonProperty("points")
-  private int points;
+  private Integer points;
 
   @JsonProperty("time")
   private String time;

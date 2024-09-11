@@ -70,7 +70,7 @@ public class UserController {
     ArrayList<String> sqlAdd = new ArrayList<>();
     try {
       // Check if the fields in the UserRequest object are not null (or valid)
-      if (request.getId() != 0) {
+      if (request.getId() != null) {
         sqlAdd.add("`id` = '" + request.getId() + "'");
       }
       if (request.getUsername() != null) {
@@ -82,7 +82,7 @@ public class UserController {
       if (request.getPassword() != null) {
         sqlAdd.add("`password_hash` = '" + request.getPassword() + "'");
       }
-      if (request.getPoints() != 0) {
+      if (request.getPoints() != null) {
         sqlAdd.add("`points` = '" + request.getPoints() + "'");
       }
       if (request.getTime() != null) {
@@ -105,6 +105,7 @@ public class UserController {
         sqlQuery += sqlAdd.get(i);
       }
       sqlQuery += ";";
+      System.out.println(sqlQuery);
 
       // Execute the SQL query and get the results
       List<Map<String, Object>> results = UserHelper.extractData(sqlQuery, jdbc);
@@ -168,16 +169,18 @@ public class UserController {
       String password = request.get("password");
 
       // Find the user by email
-      Map<String, Object> user = UserHelper
-          .extractData("SELECT * FROM `schema`.`Users` WHERE `email` = '" + email + "';", jdbc).get(0);
-      if (user == null) {
+      List<Map<String, Object>> userList = UserHelper.extractData("SELECT * FROM `schema`.`Users` WHERE `email` = '" + email + "';", jdbc);
+      if (userList.size() == 0) {
         return ResponseEntity.status(400).body("No account associated with this email. Please register.");
       }
 
+      Map<String, Object> user = userList.get(0);
+
       // Verify the password using bcrypt
-      if (!verifyPassword(password, user.get("password").toString())) {
+      if (!verifyPassword(password, user.get("password_hash").toString())) {
         return ResponseEntity.status(400).body("Incorrect password.");
       }
+      
       return ResponseEntity.status(200).body("Good.");
 
     } catch (Exception e) {
