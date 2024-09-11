@@ -95,13 +95,11 @@ public class QuestController {
 
   @PostMapping("/createquest")
   public Object createQuest(@RequestBody Request request) {
-
-    int id = -1;
     
     try {
       double latitude = request.getCoordinates()[1];
       double longitude = request.getCoordinates()[0];
-      double creator_id = request.getCreator_id();
+      int creator_id = request.getCreator_id();
       String city = request.getCity();
       String description = request.getDescription();
       String title = request.getTitle();
@@ -127,21 +125,20 @@ public class QuestController {
             ps.setString(2, description);
             ps.setString(3, city);
             ps.setString(4, tagsJson);
-            ps.setDouble(5, creator_id);
+            ps.setInt(5, creator_id);
             return ps;
           },
           keyHolder);
 
       // Retrieve the generated ID
       Number generatedId = keyHolder.getKey();
-      id = generatedId.intValue();
+      int id = generatedId.intValue();
+
+      return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
 
     } catch (Exception e) {
       e.printStackTrace();
       return "Failed to add quest: " + e.getMessage();
-
     }
-
-    return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
   }
 }
