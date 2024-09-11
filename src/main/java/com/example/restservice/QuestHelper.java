@@ -51,7 +51,7 @@ public class QuestHelper {
     return new String[] {};
   }
 
-  public static String getQuestsByDistance(Request request) {
+  public static String getQuestsByDistance(QuestRequest request) {
     double latitude = request.getCoordinates()[1];
     double longitude = request.getCoordinates()[0];
     double radiusMiles = request.getRadius();

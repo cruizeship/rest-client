@@ -75,7 +75,6 @@ public class UserController {
         sqlQuery += sqlAdd.get(i);
       }
       sqlQuery += ";";
-      System.out.println(sqlQuery);
 
       // Execute the SQL query and get the results
       List<Map<String, Object>> results = UserHelper.extractData(sqlQuery, jdbc);

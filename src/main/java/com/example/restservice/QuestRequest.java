@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Request {
+public class QuestRequest {
 
   @JsonProperty("coordinates")
   private double[] coordinates;

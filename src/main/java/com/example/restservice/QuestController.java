@@ -21,15 +21,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RestController
 public class QuestController {
 
-  ObjectMapper objectMapper = new ObjectMapper();
-
-  @Value("${spring.datasource.url}")
-  private String url;
-
   @Autowired
   JdbcTemplate jdbc;
 
-  
+  ObjectMapper objectMapper = new ObjectMapper();
 
   String baseQuery = "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `Quests`";
 
@@ -37,15 +32,13 @@ public class QuestController {
   public List<Map<String, Object>> getAllQuests() {
     String sqlQuery = baseQuery;
 
-    System.out.println("URL: " + url);
-
     List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
 
     return results;
   }
 
   @PostMapping("/getquests")
-  public Object getQuests(@RequestBody Request request) {
+  public Object getQuests(@RequestBody QuestRequest request) {
     String sqlQuery = baseQuery;
     ArrayList<String> sqlAdd = new ArrayList<>();
     try {
@@ -92,7 +85,7 @@ public class QuestController {
   }
 
   @PostMapping("/createquest")
-  public Object createQuest(@RequestBody Request request) {
+  public Object createQuest(@RequestBody QuestRequest request) {
     
     try {
       double latitude = request.getCoordinates()[1];
