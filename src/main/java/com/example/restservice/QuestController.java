@@ -3,43 +3,41 @@ package com.example.restservice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.Map;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 public class QuestController {
 
-  @Autowired
-  JdbcTemplate jdbc;
   ObjectMapper objectMapper = new ObjectMapper();
 
-  String baseQuery = "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `schema`.`Quests`";
+  @Value("${spring.datasource.url}")
+  private String url;
+
+  @Autowired
+  JdbcTemplate jdbc;
+
+  
+
+  String baseQuery = "SELECT id, title, description, city, ST_AsText(coordinates) AS coordinates, tags, creator_id, time FROM `Quests`";
 
   @GetMapping("/getallquests")
   public List<Map<String, Object>> getAllQuests() {
     String sqlQuery = baseQuery;
+
+    System.out.println("URL: " + url);
 
     List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
 
@@ -110,7 +108,7 @@ public class QuestController {
 
       // Generate SQL query
       String sqlQuery = String.format(
-          "INSERT INTO `schema`.`Quests` " +
+          "INSERT INTO `Quests` " +
               "(`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`) " +
               "VALUES (?, ?, ?, ST_GeomFromText('POINT(%f %f)', 4326), ?, ?, NOW())",
           latitude, longitude);

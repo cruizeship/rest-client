@@ -16,9 +16,9 @@ public class DatabaseController {
 
   @PostMapping("/resetquests")
   public String resetQuestDatabase() {
-    String sqlQuery = "DROP TABLE IF EXISTS `schema`.`Quests`;";
+    String sqlQuery = "DROP TABLE IF EXISTS `Quests`;";
     jdbc.execute(sqlQuery);
-    sqlQuery = "CREATE TABLE `schema`.`Quests` (\n" + //
+    sqlQuery = "CREATE TABLE `Quests` (\n" + //
             "  `id` INT NOT NULL AUTO_INCREMENT,\n" + //
             "  `title` VARCHAR(50) NOT NULL,\n" + //
             "  `description` VARCHAR(100) NOT NULL,\n" + //
@@ -34,7 +34,7 @@ public class DatabaseController {
             "  INDEX `city_idx` (`city`)                            -- Index for city queries\n" + //
             ");";
     jdbc.execute(sqlQuery);
-    sqlQuery = "ALTER TABLE `schema`.`Quests`\n" + //
+    sqlQuery = "ALTER TABLE `Quests`\n" + //
             "  MODIFY `coordinates` GEOMETRY NOT NULL SRID 4326;";
     jdbc.execute(sqlQuery);
     return "good";
@@ -42,7 +42,7 @@ public class DatabaseController {
 
   @PostMapping("/initquests")
   public String initializeQuestDatabase() {
-    String sqlQuery = "INSERT INTO `schema`.`Quests` (`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`)\n" + //
+    String sqlQuery = "INSERT INTO `Quests` (`title`, `description`, `city`, `coordinates`, `tags`, `creator_id`, `time`)\n" + //
             "VALUES\n" + //
             "  ('LA Adventure', 'Explore the streets of LA!', 'Los Angeles', ST_GeomFromText('POINT(34.0522 -118.2437)', 4326), '[\"adventure\", \"urban\", \"discovery\"]', 1, NOW()),\n" + //
             "  ('SD Beach Quest', 'Discover the hidden beaches of San Diego.', 'San Diego', ST_GeomFromText('POINT(32.7157 -117.1611)', 4326), '[\"beach\", \"water\", \"relaxation\"]', 2, NOW()),\n" + //

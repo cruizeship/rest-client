@@ -3,7 +3,6 @@ package com.example.restservice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -15,38 +14,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-
-import java.util.Date;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.lang.Arrays;
-import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SecureDigestAlgorithm;
-
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCrypt;
-import org.springframework.web.bind.annotation.*;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.sql.PreparedStatement;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,7 +28,7 @@ public class UserController {
   JdbcTemplate jdbc;
   ObjectMapper objectMapper = new ObjectMapper();
 
-  String baseQuery = "SELECT * FROM `schema`.`Users`";
+  String baseQuery = "SELECT * FROM `Users`";
 
   public static boolean verifyPassword(String plainPassword, String hashedPassword) {
     return BCrypt.checkpw(plainPassword, hashedPassword);
@@ -130,7 +100,7 @@ public class UserController {
       String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
       // Generate SQL query to insert the new user
-      String sqlQuery = "INSERT INTO `schema`.`Users` " +
+      String sqlQuery = "INSERT INTO `Users` " +
           "(`username`, `email`, `password_hash`, `points`,`quests`, `created_at`) " +
           "VALUES (?, ?, ?, ?, ?, NOW())";
 
@@ -169,7 +139,7 @@ public class UserController {
       String password = request.get("password");
 
       // Find the user by email
-      List<Map<String, Object>> userList = UserHelper.extractData("SELECT * FROM `schema`.`Users` WHERE `email` = '" + email + "';", jdbc);
+      List<Map<String, Object>> userList = UserHelper.extractData("SELECT * FROM `Users` WHERE `email` = '" + email + "';", jdbc);
       if (userList.size() == 0) {
         return ResponseEntity.status(400).body("No account associated with this email. Please register.");
       }
