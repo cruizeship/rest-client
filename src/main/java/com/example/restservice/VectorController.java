@@ -86,72 +86,6 @@ public class VectorController {
     
         return "Quest embeddings updated successfully!";
     }
-    
-    @GetMapping("/embedsearch")
-    public String searchByText(@RequestParam String searchText) {
-        // Create RestTemplate instance
-        RestTemplate restTemplate = new RestTemplate();
-        String pythonServiceUrl = "http://localhost:5000/embed";
-
-        // Create the headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-
-        // Prepare the search text to be sent to the Python API
-        Map<String, Object> requestBody = new HashMap<>();
-        Map<Integer, String> idTitleMap = new HashMap<>();
-        idTitleMap.put(0, searchText);
-        requestBody.put("idTitleMap", idTitleMap);  // Only one entry in the list
-
-        // Convert requestBody to JSON string
-        String requestBodyJson = new JSONObject(requestBody).toString();
-
-        // Send the request to the Python service
-        HttpEntity<String> request = new HttpEntity<>(requestBodyJson, headers);
-        System.out.println(request);
-        ResponseEntity<String> response;
-        try {
-            response = restTemplate.exchange(pythonServiceUrl, HttpMethod.POST, request, String.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to connect to Python service.";
-        }
-
-        try {
-            JSONObject responseJson = new JSONObject(response.getBody());
-            JSONObject idEmbeddingsJson = responseJson.getJSONObject("idEmbeddings");
-
-            if (idEmbeddingsJson.length() != 1) {
-                return "Unexpected number of embeddings received from Python service.";
-            }
-
-            // Extract the single search embedding
-            String searchId = idEmbeddingsJson.keys().next();
-            JSONArray searchEmbedding = idEmbeddingsJson.getJSONArray(searchId);
-            String searchEmbeddingString = searchEmbedding.toString();
-            System.out.println("Search embedding: " + searchEmbeddingString);
-            // Query the PostgreSQL database to get similarity scores using the search embedding
-            String sqlQuery = "SELECT title, title_embedding <=> ?::vector(768) AS similarity " +
-                            "FROM \"sidequests\".\"Quests\" " +
-                            "ORDER BY similarity ASC";
-
-            List<Map<String, Object>> results = jdbc.queryForList(sqlQuery, searchEmbeddingString);
-
-            // Prepare the result string
-            StringBuilder result = new StringBuilder("Similarity Scores:\n");
-
-            for (Map<String, Object> row : results) {
-                String title = (String) row.get("title");
-                Double similarity = (Double) row.get("similarity");
-                result.append(String.format("Title: %s, Similarity: %f\n", title, similarity));
-            }
-
-            return result.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to parse JSON response from Python service.";
-        }
-}
 
 
 public void updateQuestEmbeddingsBatch(JdbcTemplate jdbcTemplate, Map<Integer, String> embeddings) {
@@ -165,6 +99,54 @@ public void updateQuestEmbeddingsBatch(JdbcTemplate jdbcTemplate, Map<Integer, S
     }
 
     jdbcTemplate.batchUpdate(updateSql, batchArgs);
-    }
+}
 
+
+public static String embedSearchQuery(String searchQuery) {
+    // Create RestTemplate instance
+    RestTemplate restTemplate = new RestTemplate();
+    String pythonServiceUrl = "http://localhost:5000/embed";
+
+    // Create the headers
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Content-Type", "application/json");
+
+    // Prepare the search text to be sent to the Python API
+    Map<String, Object> requestBody = new HashMap<>();
+    Map<Integer, String> idTitleMap = new HashMap<>();
+    idTitleMap.put(0, searchQuery);
+    requestBody.put("idTitleMap", idTitleMap);  // Only one entry in the list
+
+    // Convert requestBody to JSON string
+    String requestBodyJson = new JSONObject(requestBody).toString();
+    System.out.println(requestBodyJson);
+    // Send the request to the Python service
+    HttpEntity<String> request = new HttpEntity<>(requestBodyJson, headers);
+    System.out.println(request);
+    ResponseEntity<String> response;
+
+    try {
+        response = restTemplate.exchange(pythonServiceUrl, HttpMethod.POST, request, String.class);
+    } catch (Exception e) {
+        e.printStackTrace();
+        return "Failed to connect to Python service.";
+    }
+    try {
+        JSONObject responseJson = new JSONObject(response.getBody());
+        JSONObject idEmbeddingsJson = responseJson.getJSONObject("idEmbeddings");
+
+        if (idEmbeddingsJson.length() != 1) {
+            return "Unexpected number of embeddings received from Python service.";
+        }
+
+        // Extract the single search embedding
+        String searchId = idEmbeddingsJson.keys().next();
+        JSONArray searchEmbedding = idEmbeddingsJson.getJSONArray(searchId);
+        String searchEmbeddingString = searchEmbedding.toString();
+        return searchEmbeddingString;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return "Failed to parse JSON response from Python service.";
+    }
+}
 }

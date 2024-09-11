@@ -71,7 +71,7 @@ public class QuestHelper {
     DecimalFormat df = new DecimalFormat("0.####");
 
     // Generate SQL query
-    return String.format("MBRContains(" +
+    return String.format("ST_Within(" +
             "ST_GeomFromText('POLYGON((" +
             "%s %s," + // Bottom-left corner
             "%s %s," + // Bottom-right corner
@@ -79,9 +79,9 @@ public class QuestHelper {
             "%s %s," + // Top-left corner
             "%s %s))', 4326), " + // Closing the polygon
             "coordinates) " +
-            "AND ST_Distance_Sphere(" +
-            "coordinates, " +
-            "ST_GeomFromText('POINT(%s %s)', 4326)) " +
+            "AND ST_Distance(" +
+            "coordinates::geography, " +
+            "ST_GeomFromText('POINT(%s %s)', 4326)::geography) " +
             "<= %f",
         df.format(minLat), df.format(minLon), // Bottom-left
         df.format(minLat), df.format(maxLon), // Bottom-right
@@ -91,7 +91,8 @@ public class QuestHelper {
         df.format(latitude), df.format(longitude), // Center point
         radiusKm * 1000 // Convert radius to meters
     );
-  }
+}
+
 
   public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {
     return jdbc.query(sqlQuery,

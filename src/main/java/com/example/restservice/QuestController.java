@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.jar.Attributes.Name;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,12 +24,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import java.sql.Connection; // Add this import statement
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.restservice.envConfig;
+
+import com.example.restservice.VectorController;
+
 
 @RestController
 public class QuestController {
@@ -48,48 +64,100 @@ public class QuestController {
 
     return results;
   }
-
+  // search quests by different filters 
+  // search radius 
+  // search filters 
+  // semantic search term 
   @PostMapping("/getquests")
   public Object getQuests(@RequestBody Request request) {
-    String sqlQuery = baseQuery;
-    ArrayList<String> sqlAdd = new ArrayList<>();
+    
+    String queryEmbeddingString = VectorController.embedSearchQuery(request.getSearchQuery());
+    double latitude = request.getCoordinates()[1];
+    double longitude = request.getCoordinates()[0];
+    double radius = request.getRadius();
+    boolean sortTimeNeeded = request.getSortTimeNeeded();
+    boolean sortDifficulty = request.getSortDifficulty();
+    boolean sortPopularity = request.getSortPopularity();
+    boolean useSimilarityWeight = request.getUseSimilarityWeight();
+    double timeWeight = request.getTimeWeight();
+    double difficultyWeight = request.getDifficultyWeight();
+    double popularityWeight = request.getPopularityWeight();
+    double similarityWeight = request.getSimilarityWeight();
+    //double timeWeight = 1.0;
+    //double difficultyWeight = 1.0;
+    //double popularityWeight = 1.0;
+    //double similarityWeight = 1.0;
+    //System.out.println("Coordinates: " + latitude + ", " + longitude);
     try {
-      if (request.getId() != null) {
-        sqlAdd.add("id = '" + request.getId() + "'");
-      }
-      if (request.getTitle() != null) {
-        sqlAdd.add("title = '" + request.getTitle() + "'");
-      }
-      if (request.getCreator_id() != null) {
-        sqlAdd.add("creator_id = '" + request.getCreator_id() + "'");
-      }
-      if (request.getCoordinates() != null) {
-        if (request.getRadius() != null) {
-          sqlAdd.add(QuestHelper.getQuestsByDistance(request));
-        }
-      }
-      if (request.getCity() != null) {
-        sqlAdd.add("city = '" + request.getCity() + "'");
-      }
-      if (request.getTags() != null) {
-        for (String tag : request.getTags()) {
-          sqlAdd.add(String.format("tags @> '[\"%s\"]'::jsonb", tag)); // PostgreSQL uses jsonb type and @> operator
-        }
-      }
+      // Define the SQL query with placeholders for parameters
+      //Step 1: Query for similarity_cte
+      String sqlQuery = 
+        "WITH similarity_calculation AS (\n" +
+        "  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, \n" +
+        "    (title_embedding <=> ?::vector(768)) AS similarity\n" +
+        "  FROM sidequests.\"Quests\"\n" +
+        "  WHERE ST_DWithin(coordinates, ST_MakePoint(?, ?)::geography, ?)\n" +
+        "), \n" +
+        "scores AS (\n" +
+        "  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, similarity,\n" +
+        "    -- Time Score\n" +
+        "    CASE \n" +
+        "      WHEN time_needed IS NOT NULL AND ? THEN time_needed * ?\n" +
+        "      WHEN time_needed IS NOT NULL AND NOT ? THEN (50 - time_needed) * ?\n" +
+        "      ELSE 0 \n" +
+        "    END AS time_score,\n" +
+        "    -- Difficulty Score\n" +
+        "    CASE \n" +
+        "      WHEN difficulty IS NOT NULL AND ? THEN difficulty * ?\n" +
+        "      WHEN difficulty IS NOT NULL AND NOT ? THEN (5 - difficulty) * ?\n" +
+        "      ELSE 0\n" +
+        "    END AS difficulty_score,\n" +
+        "    -- Popularity Score\n" +
+        "    CASE \n" +
+        "      WHEN popularity IS NOT NULL AND ? THEN popularity * ?\n" +
+        "      WHEN popularity IS NOT NULL AND NOT ? THEN (10 - popularity) * ?\n" +
+        "      ELSE 0\n" +
+        "    END AS popularity_score,\n" +
+        "    -- Similarity Score\n" +
+        "    CASE \n" +
+        "      WHEN ? THEN (1 - similarity) * ?\n" +
+        "      ELSE 0\n" +
+        "    END AS similarity_score\n" +
+        "  FROM similarity_calculation\n" +
+        "), \n" +
+        "final_scores AS (\n" +
+        "  SELECT *,\n" +
+        "    (time_score + difficulty_score + popularity_score + similarity_score) AS weighted_score\n" +
+        "  FROM scores\n" +
+        ")\n" +
+        "SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, weighted_score, similarity_scor\n" +
+        "FROM final_scores\n" +
+        "ORDER BY weighted_score DESC";
 
-      for (int i = 0; i < sqlAdd.size(); i++) {
-        if (i == 0) {
-          sqlQuery += " WHERE ";
-        } else {
-          sqlQuery += " AND ";
-        }
-        sqlQuery += sqlAdd.get(i);
-      }
-      sqlQuery += ";";
+Object[] params = {
+    queryEmbeddingString, // 1: Embedding vector
+    longitude,            // 2: Longitude for location search
+    latitude,             // 3: Latitude for location search
+    radius,               // 4: Radius for location search
+    sortTimeNeeded,       // 5: Boolean for time_needed sorting
+    timeWeight,           // 6: Weight for time_needed
+    sortTimeNeeded,      // 7: Inverse boolean for low time_needed sorting
+    timeWeight,           // 8: Weight for time_needed
+    sortDifficulty,       // 9: Boolean for difficulty sorting
+    difficultyWeight,     // 10: Weight for difficulty
+    !sortDifficulty,      // 11: Inverse boolean for low difficulty sorting
+    difficultyWeight,     // 12: Weight for difficulty
+    sortPopularity,       // 13: Boolean for popularity sorting
+    popularityWeight,     // 14: Weight for popularity
+    !sortPopularity,      // 15: Inverse boolean for low popularity sorting
+    popularityWeight,     // 16: Weight for popularity
+    useSimilarityWeight,   // 17: Boolean for similarity weighting
+    similarityWeight      // 18: Weight for similarity
+};
+      
+      return jdbc.queryForList(sqlQuery, params);
 
-      List<Map<String, Object>> results = QuestHelper.extractData(sqlQuery, jdbc);
-      return results;
-
+    
     } catch (Exception e) {
       e.printStackTrace();
       return "Failed to query database: " + e.getMessage();
@@ -104,7 +172,7 @@ public class QuestController {
     try {
       double latitude = request.getCoordinates()[1];
       double longitude = request.getCoordinates()[0];
-      double creator_id = request.getCreator_id();
+      double creator_id = request.getCreatorId();
       String city = request.getCity();
       String description = request.getDescription();
       String title = request.getTitle();

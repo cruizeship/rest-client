@@ -23,27 +23,36 @@ public class DatabaseController {
     public String resetQuestDatabase() {
         String sqlQuery = String.format("DROP TABLE IF EXISTS \"%s\".\"Quests\";", DB_NAME);
         jdbc.execute(sqlQuery);
-        sqlQuery = String.format("CREATE EXTENSION IF NOT EXISTS postgis;" + //
-                "CREATE SCHEMA IF NOT EXISTS \"%s\";" + //
-                "CREATE EXTENSION IF NOT EXISTS vector;" + //
-                "CREATE TABLE \"%s\".\"Quests\" (\n" + //
-                "  \"id\" SERIAL PRIMARY KEY,\n" + // SERIAL instead of AUTO_INCREMENT
-                "  \"title\" VARCHAR(50) NOT NULL,\n" + //
-                "  \"titleEmbedded\" BOOLEAN DEFAULT FALSE,\n" + 
-                "  \"title_embedding\" vector(768),\n" + // -- Assuming you're using DistilBERT, which outputs 768-dimensional embeddings
-                "  \"description\" VARCHAR(100) NOT NULL,\n" + //
-                "  \"city\" VARCHAR(45) NOT NULL,\n" + //
-                "  \"coordinates\" GEOMETRY(Point, 4326) NOT NULL,\n" + // PostGIS geometry type with SRID
-                "  \"tags\" JSON NULL,\n" + //
-                "  \"creator_id\" INT NOT NULL,\n" + //
-                "  \"time\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" + // TIMESTAMP in PostgreSQL
-                "  UNIQUE (\"title\"));" + //
-                "  CREATE INDEX ON \"%s\".\"Quests\" USING GIST (\"coordinates\");" + // PostGIS spatial index
-                "  CREATE INDEX ON \"%s\".\"Quests\" (\"creator_id\");" + //
-                "  CREATE INDEX ON \"%s\".\"Quests\" (\"city\");" , DB_NAME, DB_NAME, DB_NAME, DB_NAME, DB_NAME);
-        jdbc.execute(sqlQuery);
+        String sqlQuery2 = String.format(
+          "CREATE EXTENSION IF NOT EXISTS postgis;\n" +
+          "CREATE EXTENSION IF NOT EXISTS vector;\n" +
+          "CREATE SCHEMA IF NOT EXISTS \"%s\";\n" +
+          "CREATE TABLE \"%s\".\"Quests\" (\n" +
+          "  \"id\" SERIAL PRIMARY KEY,\n" + // SERIAL will auto-increment the primary key
+          "  \"title\" VARCHAR(50) NOT NULL,\n" +
+          "  \"titleEmbedded\" BOOLEAN DEFAULT FALSE,\n" + 
+          "  \"title_embedding\" vector(768),\n" + // Assuming a vector extension for embeddings
+          "  \"description\" TEXT NOT NULL,\n" + // TEXT type for description
+          "  \"city\" VARCHAR(45) NOT NULL,\n" +
+          "  \"coordinates\" GEOMETRY(Point, 4326) NOT NULL,\n" + // PostGIS type for geographical coordinates
+          "  \"creator_id\" INTEGER NOT NULL,\n" +
+          "  \"time\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" + // TIMESTAMP without timezone
+          "  \"popularity\" NUMERIC(3,1),\n" + // NUMERIC type for popularity with 1 decimal place
+          "  \"time_needed\" NUMERIC(4,1),\n" + // NUMERIC type for time_needed with 1 decimal place
+          "  \"cost\" INTEGER,\n" + // INTEGER type for cost
+          "  \"difficulty\" INTEGER\n" + // INTEGER type for difficulty
+          ");\n" +
+          "CREATE INDEX ON \"%s\".\"Quests\" USING GIST (\"coordinates\");\n" + // PostGIS spatial index for coordinates
+          "CREATE INDEX ON \"%s\".\"Quests\" (\"creator_id\");\n" + // Index for creator_id
+          "CREATE INDEX ON \"%s\".\"Quests\" (\"city\");", // Index for city
+          DB_NAME, DB_NAME, DB_NAME, DB_NAME, DB_NAME
+      );
 
-        return "good";
+      // Execute the SQL query
+      jdbc.execute(sqlQuery2);
+
+      return "good";
+
     }
 
     @PostMapping("/initquests")
