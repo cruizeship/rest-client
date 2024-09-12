@@ -28,10 +28,25 @@ public class UserController {
   JdbcTemplate jdbc;
   ObjectMapper objectMapper = new ObjectMapper();
 
+  String secretKey = "8133c56afcb96411a19e8a3be0f3c636bd4120b0c0f2030a59f734c57840b97e84c745ff0d037f0847bc6021e7d9c0ab4a71ca886eefcaf622a486653be87fc0";
+  long jwtExpiration = (long)86400000 * (long)365;
+
   String baseQuery = "SELECT * FROM `Users`";
 
-  public static boolean verifyPassword(String plainPassword, String hashedPassword) {
-    return BCrypt.checkpw(plainPassword, hashedPassword);
+  @PostMapping("/istokenvalid")
+  public ResponseEntity<?> isTokenValid(@RequestBody Map<String, String> request) {
+    try {
+      String token = request.get("token");
+      String username = request.get("username");
+      String username2 = AuthHelper.extractUsername(token);
+      if (username2.equals(username) && !AuthHelper.isTokenExpired(token)) {
+        return ResponseEntity.status(200).body("Login successful");
+      } else {
+        return ResponseEntity.status(400).body("Invalid credentials");
+      }
+    } catch (Exception e) {
+      return ResponseEntity.status(400).body("Invalid token");
+    }
   }
 
   @PostMapping("/getuser")
@@ -138,7 +153,8 @@ public class UserController {
       String password = request.get("password");
 
       // Find the user by email
-      List<Map<String, Object>> userList = UserHelper.extractData("SELECT * FROM `Users` WHERE `email` = '" + email + "';", jdbc);
+      List<Map<String, Object>> userList = UserHelper
+          .extractData("SELECT * FROM `Users` WHERE `email` = '" + email + "';", jdbc);
       if (userList.size() == 0) {
         return ResponseEntity.status(400).body("No account associated with this email. Please register.");
       }
@@ -146,11 +162,13 @@ public class UserController {
       Map<String, Object> user = userList.get(0);
 
       // Verify the password using bcrypt
-      if (!verifyPassword(password, user.get("password_hash").toString())) {
+      if (!AuthHelper.verifyPassword(password, user.get("password_hash").toString())) {
         return ResponseEntity.status(400).body("Incorrect password.");
       }
-      
-      return ResponseEntity.status(200).body("Good.");
+
+      String generatedToken = AuthHelper.generateToken(user.get("username").toString());
+
+      return ResponseEntity.status(200).body(generatedToken);
 
     } catch (Exception e) {
       return ResponseEntity.status(500).body("Server error.");
