@@ -8,30 +8,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import org.springframework.jdbc.core.JdbcTemplate;
+import java.util.stream.IntStream;
+import java.util.Arrays;
 
 public class UserHelper {
-  public static int[] formatIntArray(String arrayString) {
-    if (arrayString != null && arrayString.startsWith("[") && arrayString.endsWith("]")) {
-      // Remove the brackets [ ]
-      String content = arrayString.substring(1, arrayString.length() - 1);
-
-      // Split by comma, making sure to trim any whitespace
-      String[] parts = content.split(",");
-
-      // Create an array to hold the integers
-      int[] intArray = new int[parts.length];
-
-      // Parse each string part into an integer and store in intArray
-      for (int i = 0; i < parts.length; i++) {
-        parts[i] = parts[i].trim(); // Remove surrounding whitespace
-        intArray[i] = Integer.parseInt(parts[i]); // Convert to integer
-      }
-
-      return intArray;
+  public static int[] formatIntArray(String input) {
+    if (input == null || input.equals("[]") || input.trim().isEmpty()) {
+      return new int[0]; // Return an empty array if the input is empty or invalid
     }
 
-    // Return an empty array if the input is not valid
-    return new int[0];
+    // Parse the string assuming it's a valid integer array
+    return Arrays.stream(input.split(","))
+        .filter(str -> !str.trim().isEmpty()) // Filter out empty strings
+        .mapToInt(Integer::parseInt)
+        .toArray();
   }
 
   public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {

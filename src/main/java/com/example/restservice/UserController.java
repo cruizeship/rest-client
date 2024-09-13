@@ -107,8 +107,8 @@ public class UserController {
       String username = request.getUsername();
       String email = request.getEmail();
       String password = request.getPassword();
-      int points = request.getPoints();
-      String questsJson = objectMapper.writeValueAsString(request.getQuests());
+      int points = 0;
+      String questsJson = "[]";
 
       // Hash the password before saving it to the database
       String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
