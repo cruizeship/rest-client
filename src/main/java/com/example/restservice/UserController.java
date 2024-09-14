@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,7 +30,7 @@ public class UserController {
   ObjectMapper objectMapper = new ObjectMapper();
 
   String secretKey = "8133c56afcb96411a19e8a3be0f3c636bd4120b0c0f2030a59f734c57840b97e84c745ff0d037f0847bc6021e7d9c0ab4a71ca886eefcaf622a486653be87fc0";
-  long jwtExpiration = (long)86400000 * (long)365;
+  long jwtExpiration = (long) 86400000 * (long) 365;
 
   String baseQuery = "SELECT * FROM `Users`";
 
@@ -50,7 +51,7 @@ public class UserController {
   }
 
   @PostMapping("/getuser")
-  public Object getUser(@RequestBody UserRequest request) {
+  public ResponseEntity<?> getUser(@RequestBody UserRequest request) {
     String sqlQuery = baseQuery;
     ArrayList<String> sqlAdd = new ArrayList<>();
     try {
@@ -93,16 +94,21 @@ public class UserController {
 
       // Execute the SQL query and get the results
       List<Map<String, Object>> results = UserHelper.extractData(sqlQuery, jdbc);
-      return results;
+      Map<String, Object> response = new HashMap<>();
+      response.put("data", results);
+      response.put("message", "Query successful");
+      return ResponseEntity.status(200).body(response);
 
     } catch (Exception e) {
-      e.printStackTrace();
-      return null;
+      Map<String, Object> response = new HashMap<>();
+      response.put("error", e.getMessage());
+      response.put("message", "Query failed");
+      return ResponseEntity.status(400).body(response);
     }
   }
 
   @PostMapping("/createuser")
-  public Object createUser(@RequestBody UserRequest request) {
+  public ResponseEntity<?> createUser(@RequestBody UserRequest request) {
     try {
       String username = request.getUsername();
       String email = request.getEmail();
@@ -137,11 +143,17 @@ public class UserController {
       Number generatedId = keyHolder.getKey();
       int id = generatedId.intValue();
 
-      return UserHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
+      Map<String, Object> response = new HashMap<>();
+      response.put("data", UserHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0));
+      response.put("message", "User created successfully");
+
+      return ResponseEntity.status(200).body(response);
 
     } catch (Exception e) {
-      e.printStackTrace();
-      return "Failed to add user: " + e.getMessage();
+      Map<String, Object> response = new HashMap<>();
+      response.put("error", e.getMessage());
+      response.put("message", "Failed to add user");
+      return ResponseEntity.status(400).body(response);
     }
 
   }
@@ -149,38 +161,60 @@ public class UserController {
   @PostMapping("/login")
   public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
     try {
-      String email = request.get("email");
-      String password = request.get("password");
+      String email = request.get("email") != null ? request.get("email") : "";
+      String username = request.get("username") != null ? request.get("username") : "";
+      String password = request.get("password") != null ? request.get("password") : "";
+      String sqlQuery = baseQuery;
+      if (username == "") {
+        sqlQuery += " WHERE `email` = '" + email + "';";
+      } else if (email == "") {
+        sqlQuery += " WHERE `username` = '" + email + "';";
+      } else {
+        return ResponseEntity.status(400).body(Map.of("message", "Invalid input"));
+      }
 
       // Find the user by email
-      List<Map<String, Object>> userList = UserHelper
-          .extractData("SELECT * FROM `Users` WHERE `email` = '" + email + "';", jdbc);
+      List<Map<String, Object>> userList = UserHelper.extractData(sqlQuery, jdbc);
       if (userList.size() == 0) {
-        return ResponseEntity.status(400).body("No account associated with this email. Please register.");
+        return ResponseEntity.status(400)
+            .body(Map.of("message", "No account associated with this email/username. Please register"));
       }
 
       Map<String, Object> user = userList.get(0);
 
       // Verify the password using bcrypt
       if (!AuthHelper.verifyPassword(password, user.get("password_hash").toString())) {
-        return ResponseEntity.status(400).body("Incorrect password.");
+        return ResponseEntity.status(400).body(Map.of("message", "Incorrect password"));
       }
 
       String generatedToken = AuthHelper.generateToken(user.get("username").toString());
 
-      return ResponseEntity.status(200).body(generatedToken);
+      // Return a JSON object with token and success message
+      Map<String, Object> response = new HashMap<>();
+      response.put("token", generatedToken);
+      response.put("message", "Login successful");
+
+      return ResponseEntity.status(200).body(response);
 
     } catch (Exception e) {
-      return ResponseEntity.status(500).body("Server error.");
+      return ResponseEntity.status(500).body(Map.of("message", "Server error"));
     }
   }
 
   @GetMapping("/getallusers")
-  public List<Map<String, Object>> getAllUsers() {
-    String sqlQuery = baseQuery;
+  public ResponseEntity<?> getAllUsers() {
+    try {
+      String sqlQuery = baseQuery;
+      List<Map<String, Object>> results = UserHelper.extractData(sqlQuery, jdbc);
 
-    List<Map<String, Object>> results = UserHelper.extractData(sqlQuery, jdbc);
+      Map<String, Object> response = new HashMap<>();
+      response.put("data", results);
+      response.put("message", "Query successful");
 
-    return results;
+      return ResponseEntity.status(200).body(response);
+      
+    } catch (Exception e) {
+      return ResponseEntity.status(500).body(Map.of("message", "Server error"));
+    }
   }
 }
