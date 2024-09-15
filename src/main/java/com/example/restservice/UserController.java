@@ -116,6 +116,18 @@ public class UserController {
       int points = 0;
       String questsJson = "[]";
 
+      Map<String, Object> response = new HashMap<>();
+
+      if (username.equals("")) {
+        return ResponseEntity.status(400).body(Map.of("message", "Missing username"));
+      } else if (email.equals("")) {
+        return ResponseEntity.status(400).body(Map.of("message", "Missing email"));
+      } else if (password.equals("")) {
+        return ResponseEntity.status(400).body(Map.of("message", "Missing password"));
+      } else if (password.length() < 8) {
+        return ResponseEntity.status(400).body(Map.of("message", "Password must be at least 8 characters"));
+      }
+
       // Hash the password before saving it to the database
       String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
@@ -143,7 +155,6 @@ public class UserController {
       Number generatedId = keyHolder.getKey();
       int id = generatedId.intValue();
 
-      Map<String, Object> response = new HashMap<>();
       response.put("data", UserHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0));
       response.put("message", "User created successfully");
 
@@ -151,8 +162,15 @@ public class UserController {
 
     } catch (Exception e) {
       Map<String, Object> response = new HashMap<>();
+      String error = e.getMessage();
       response.put("error", e.getMessage());
-      response.put("message", "Failed to add user");
+      if (error.contains("username") && error.contains("Duplicate")) {
+        response.put("message", "Username already in use");
+      } else if (error.contains("email") && error.contains("Duplicate")) {
+        response.put("message", "Email already in use");
+      } else {
+        response.put("message", "Failed to add user");
+      }
       return ResponseEntity.status(400).body(response);
     }
 
@@ -177,7 +195,7 @@ public class UserController {
       List<Map<String, Object>> userList = UserHelper.extractData(sqlQuery, jdbc);
       if (userList.size() == 0) {
         return ResponseEntity.status(400)
-            .body(Map.of("message", "No account associated with this email/username. Please register"));
+            .body(Map.of("message", "No account associated with this email/username"));
       }
 
       Map<String, Object> user = userList.get(0);
