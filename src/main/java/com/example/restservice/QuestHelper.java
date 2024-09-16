@@ -5,7 +5,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.client.RestTemplate;
 
-import static org.mockito.Mockito.description;
+
 import java.sql.PreparedStatement;
 
 import java.sql.ResultSet;
