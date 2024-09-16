@@ -29,4 +29,14 @@ public class UserRequest {
   @JsonProperty("quests")
   private int[] quests;
 
+  public UserRequest(Integer id, String username, String email, String password, Integer points, String time,
+      int[] quests) {
+    this.id = id;
+    this.username = username;
+    this.email = email;
+    this.password = password;
+    this.points = points;
+    this.time = time;
+    this.quests = quests;
+  }
 }

@@ -114,7 +114,6 @@ public class UserController {
       String email = request.getEmail();
       String password = request.getPassword();
       int points = 0;
-      Map<String, Object> response = new HashMap<>();
 
       if (username.equals("")) {
         return ResponseEntity.status(400).body(Map.of("message", "Missing username"));
@@ -126,35 +125,13 @@ public class UserController {
         return ResponseEntity.status(400).body(Map.of("message", "Password must be at least 8 characters"));
       }
 
-      // Hash the password before saving it to the database
-      String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
-      // Modify the SQL query to use the RETURNING clause
-      String sqlQuery = "INSERT INTO \"Users\" (username, email, password_hash, points, quests, created_at) " +
-      "VALUES (?, ?, ?, ?, '{}'::jsonb, NOW()) RETURNING id";
+      Map<String, Object> response = new HashMap<>();
+      Map<String, Object> user = UserHelper.createUser(username, email, password, points, jdbc);
 
-      // Use KeyHolder to retrieve the generated ID
-      KeyHolder keyHolder = new GeneratedKeyHolder();
-
-      jdbc.update(connection -> {
-      PreparedStatement ps = connection.prepareStatement(sqlQuery, new String[] { "id" });
-      ps.setString(1, username);
-      ps.setString(2, email);
-      ps.setString(3, passwordHash);
-      ps.setInt(4, points);
-
-      return ps;
-      }, keyHolder);
-
-      // Retrieve the generated key (ID)
-      Number generatedId = keyHolder.getKey();
-      System.out.println("Generated user ID: " + generatedId);
-
-
-        
-      int id = generatedId.intValue();
-
-      response.put("data", UserHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0));
+      response.put("data", user);
+      
       response.put("message", "User created successfully");
+      
 
       return ResponseEntity.status(200).body(response);
 
