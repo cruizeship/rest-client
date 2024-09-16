@@ -174,7 +174,8 @@ public class DatabaseController {
         "  password_hash VARCHAR(255) NOT NULL,\n" +
         "  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),\n" +
         "  points INTEGER DEFAULT 0,\n" +
-        "  quests JSONB\n" + // JSONB for quests field
+        "  quests_created JSONB DEFAULT '[]'::jsonb,\n" + // JSONB for quests field
+        "  quests_completed JSONB DEFAULT '[]'::jsonb\n" + // JSONB for quests field
         ");";
 
     // Execute the SQL query

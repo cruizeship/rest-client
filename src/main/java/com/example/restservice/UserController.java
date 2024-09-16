@@ -74,12 +74,6 @@ public class UserController {
       if (request.getTime() != null) {
         sqlAdd.add("`time` = '" + request.getTime() + "'");
       }
-      if (request.getQuests() != null && request.getQuests().length > 0) {
-        // For array of quests, we can join them with commas and wrap in parentheses
-        for (int quest : request.getQuests()) {
-          sqlAdd.add(String.format("JSON_CONTAINS(quests, '\"%d\"', '$')", quest));
-        }
-      }
 
       // Add conditions if there are any in the sqlAdd list
       for (int i = 0; i < sqlAdd.size(); i++) {

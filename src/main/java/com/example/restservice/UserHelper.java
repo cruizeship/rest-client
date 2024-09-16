@@ -55,7 +55,8 @@ public class UserHelper {
             String time = rs.getString("created_at") != null ? rs.getString("created_at") : "";
 
             Integer points = rs.getObject("points") != null ? rs.getInt("points") : null;
-            int[] quests = rs.getString("quests") != null ? formatIntArray(rs.getString("quests")) : new int[0];
+            int[] quests_created = rs.getString("quests_created") != null ? formatIntArray(rs.getString("quests_created")) : new int[0];
+            int[] quests_completed = rs.getString("quests_completed") != null ? formatIntArray(rs.getString("quests_completed")) : new int[0];
 
             // Populate the map with the checked values
             result.put("id", id);
@@ -63,7 +64,8 @@ public class UserHelper {
             result.put("username", username);
             result.put("password_hash", password);
             result.put("points", points);
-            result.put("quests", quests);
+            result.put("quests_created", quests_created);
+            result.put("quests_completed", quests_completed);
             result.put("created_at", time != null ? time.toString() : null); // Converting Timestamp to String if needed
 
             return result;
@@ -76,8 +78,8 @@ public class UserHelper {
       // Hash the password before saving it to the database
       String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
       // Modify the SQL query to use the RETURNING clause
-      String sqlQuery = "INSERT INTO \"Users\" (username, email, password_hash, points, quests, created_at) " +
-      "VALUES (?, ?, ?, ?, '{}'::jsonb, NOW()) RETURNING id";
+      String sqlQuery = "INSERT INTO \"Users\" (username, email, password_hash, points, quests_created, quests_completed, created_at) " +
+      "VALUES (?, ?, ?, ?, '[]'::jsonb, '[]'::jsonb, NOW()) RETURNING id";
 
       // Use KeyHolder to retrieve the generated ID
       KeyHolder keyHolder = new GeneratedKeyHolder();

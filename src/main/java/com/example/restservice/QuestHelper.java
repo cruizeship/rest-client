@@ -5,7 +5,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.client.RestTemplate;
 
-import static org.mockito.Mockito.description;
 import java.sql.PreparedStatement;
 
 import java.sql.ResultSet;
@@ -150,6 +149,14 @@ public class QuestHelper {
         });
   }
 
+  public static void associateQuestWithUser(Integer userId, Integer questId, JdbcTemplate jdbc) {
+    // SQL query to update the JSONB field by appending the new quest ID
+    String sql = "UPDATE \"Users\" SET quests_created = COALESCE(quests_created, '[]'::jsonb) || to_jsonb(?) WHERE id = ?";
+    
+    // Execute the update
+    jdbc.update(sql, questId, userId);
+}
+
   public static Object createQuest(double latitude, double longitude, String city, Integer creator_id,
       String description, String title, Integer difficulty, Double timeNeeded, JdbcTemplate jdbc) {
     // calculate the city based on the latitude and longitude
@@ -215,6 +222,8 @@ public class QuestHelper {
     // Retrieve the generated ID
     Number generatedId = keyHolder.getKey();
     int id = generatedId.intValue();
+
+    associateQuestWithUser(creator_id, id, jdbc);
     return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
 
   }
