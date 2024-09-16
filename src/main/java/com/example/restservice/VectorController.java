@@ -38,7 +38,7 @@ public class VectorController {
         headers.set("Content-Type", "application/json");
     
         // Define the SQL query to select titles where titleEmbedded is false
-        String sqlQuery = String.format("SELECT id, description FROM \"%s\".\"Quests\";", "sidequests");
+        String sqlQuery = "SELECT id, description FROM \"Quests\";";
     
         // Use JdbcTemplate's queryForList to capture the extracted data
         List<Map<String, Object>> rows = jdbc.queryForList(sqlQuery);
@@ -89,7 +89,7 @@ public class VectorController {
 
 
 public void updateQuestEmbeddingsBatch(JdbcTemplate jdbcTemplate, Map<Integer, String> embeddings) {
-    String updateSql = "UPDATE \"sidequests\".\"Quests\" SET title_embedding = ?::vector(768), \"titleEmbedded\" = true WHERE id = ?";
+    String updateSql = "UPDATE \"Quests\" SET title_embedding = ?::vector(768), \"titleEmbedded\" = true WHERE id = ?";
 
     List<Object[]> batchArgs = new ArrayList<>();
     for (Map.Entry<Integer, String> entry : embeddings.entrySet()) {

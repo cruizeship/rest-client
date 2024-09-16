@@ -51,9 +51,9 @@ public class QuestHelper {
     return new String[] {};
   }
 
-  public static String getQuestsByDistance(Request request) {
-    double latitude = request.getCoordinates()[1];
-    double longitude = request.getCoordinates()[0];
+  public static String getQuestsByDistance(QuestRequest request) {
+    double latitude = request.getLatitude();
+    double longitude = request.getLongitude();
     double radiusMiles = request.getRadius();
     double radiusKm = radiusMiles * 1.60934;
 
@@ -94,37 +94,46 @@ public class QuestHelper {
 }
 
 
-  public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {
-    return jdbc.query(sqlQuery,
-        new RowMapper<Map<String, Object>>() {
-          @Override
-          public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Map<String, Object> result = new HashMap<>();
+public static List<Map<String, Object>> extractData(String sqlQuery, JdbcTemplate jdbc) {
+  return jdbc.query(sqlQuery,
+      new RowMapper<Map<String, Object>>() {
+        @Override
+        public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+          Map<String, Object> result = new HashMap<>();
 
-            // Null checking for all columns in Quests table
-            Integer id = rs.getObject("id") != null ? rs.getInt("id") : null;
-            String title = rs.getString("title") != null ? rs.getString("title") : "";
-            String description = rs.getString("description") != null ? rs.getString("description") : "";
-            String city = rs.getString("city") != null ? rs.getString("city") : "";
-            double[] coordinates = rs.getString("coordinates") != null ? formatPoint(rs.getString("coordinates"))
-                : new double[0];
-            String[] tags = rs.getString("tags") != null ? formatStringArray(rs.getString("tags")) : new String[0]; // Assuming JSON is returned as a
-                                                                                    // string
-            Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
-            Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
+          // Null checking for all columns in Quests table
+          Integer id = rs.getObject("id") != null ? rs.getInt("id") : null;
+          String title = rs.getString("title") != null ? rs.getString("title") : "";
+          String description = rs.getString("description") != null ? rs.getString("description") : "";
+          String city = rs.getString("city") != null ? rs.getString("city") : "";
 
-            // Populate the map with the checked values
-            result.put("id", id);
-            result.put("title", title);
-            result.put("description", description);
-            result.put("city", city);
-            result.put("coordinates", coordinates);
-            result.put("tags", tags);
-            result.put("creator_id", creatorId);
-            result.put("time", time != null ? time.toString() : null); // Converting Timestamp to String if needed
+          // Handling latitude and longitude
+          Double latitude = rs.getObject("latitude") != null ? rs.getDouble("latitude") : null;
+          Double longitude = rs.getObject("longitude") != null ? rs.getDouble("longitude") : null;
+          double[] coordinates = (latitude != null && longitude != null) ? new double[]{latitude, longitude} : new double[0];
 
-            return result;
-          }
-        });
-  }
+          Integer creatorId = rs.getObject("creator_id") != null ? rs.getInt("creator_id") : null;
+          Timestamp time = rs.getTimestamp("time") != null ? rs.getTimestamp("time") : null;
+
+          // Handling time_needed and difficulty
+          Integer timeNeeded = rs.getObject("time_needed") != null ? rs.getInt("time_needed") : null;
+          String difficulty = rs.getString("difficulty") != null ? rs.getString("difficulty") : "";
+
+          // Populate the map with the checked values
+          result.put("id", id);
+          result.put("title", title);
+          result.put("description", description);
+          result.put("city", city);
+          result.put("coordinates", coordinates);
+          result.put("creator_id", creatorId);
+          result.put("time", time != null ? time.toString() : null); // Converting Timestamp to String if needed
+          result.put("time_needed", timeNeeded);
+          result.put("difficulty", difficulty);
+
+          return result;
+        }
+      });
+}
+
+
 }

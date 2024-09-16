@@ -9,44 +9,39 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.restservice.envConfig;
+
 
 @RestController
 public class DatabaseController {
-
-    String DB_NAME = envConfig.getDB_NAME();
 
     @Autowired
     JdbcTemplate jdbc;
 
     @PostMapping("/resetquests")
     public String resetQuestDatabase() {
-        String sqlQuery = String.format("DROP TABLE IF EXISTS \"%s\".\"Quests\";", DB_NAME);
+        String sqlQuery = "DROP TABLE IF EXISTS \"Quests\";";
         jdbc.execute(sqlQuery);
-        String sqlQuery2 = String.format(
-          "CREATE EXTENSION IF NOT EXISTS postgis;\n" +
-          "CREATE EXTENSION IF NOT EXISTS vector;\n" +
-          "CREATE SCHEMA IF NOT EXISTS \"%s\";\n" +
-          "CREATE TABLE \"%s\".\"Quests\" (\n" +
-          "  \"id\" SERIAL PRIMARY KEY,\n" + // SERIAL will auto-increment the primary key
-          "  \"title\" VARCHAR(50) NOT NULL,\n" +
-          "  \"titleEmbedded\" BOOLEAN DEFAULT FALSE,\n" + 
-          "  \"title_embedding\" vector(768),\n" + // Assuming a vector extension for embeddings
-          "  \"description\" TEXT NOT NULL,\n" + // TEXT type for description
-          "  \"city\" VARCHAR(45) NOT NULL,\n" +
-          "  \"coordinates\" GEOMETRY(Point, 4326) NOT NULL,\n" + // PostGIS type for geographical coordinates
-          "  \"creator_id\" INTEGER NOT NULL,\n" +
-          "  \"time\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" + // TIMESTAMP without timezone
-          "  \"popularity\" NUMERIC(3,1),\n" + // NUMERIC type for popularity with 1 decimal place
-          "  \"time_needed\" NUMERIC(4,1),\n" + // NUMERIC type for time_needed with 1 decimal place
-          "  \"cost\" INTEGER,\n" + // INTEGER type for cost
-          "  \"difficulty\" INTEGER\n" + // INTEGER type for difficulty
-          ");\n" +
-          "CREATE INDEX ON \"%s\".\"Quests\" USING GIST (\"coordinates\");\n" + // PostGIS spatial index for coordinates
-          "CREATE INDEX ON \"%s\".\"Quests\" (\"creator_id\");\n" + // Index for creator_id
-          "CREATE INDEX ON \"%s\".\"Quests\" (\"city\");", // Index for city
-          DB_NAME, DB_NAME, DB_NAME, DB_NAME, DB_NAME
-      );
+
+        String sqlQuery2 = "CREATE EXTENSION IF NOT EXISTS postgis;\n" +
+        "CREATE EXTENSION IF NOT EXISTS vector;\n" +
+        "CREATE TABLE \"Quests\" (\n" +
+        "  \"id\" SERIAL PRIMARY KEY,\n" + // SERIAL will auto-increment the primary key
+        "  \"title\" VARCHAR(50) NOT NULL,\n" +
+        "  \"titleEmbedded\" BOOLEAN DEFAULT FALSE,\n" + 
+        "  \"title_embedding\" vector(768),\n" + // Assuming a vector extension for embeddings
+        "  \"description\" TEXT NOT NULL,\n" + // TEXT type for description
+        "  \"city\" VARCHAR(45) NOT NULL,\n" +
+        "  \"coordinates\" GEOMETRY(Point, 4326) NOT NULL,\n" + // PostGIS type for geographical coordinates
+        "  \"creator_id\" INTEGER NOT NULL,\n" +
+        "  \"time\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" + // TIMESTAMP without timezone
+        "  \"popularity\" NUMERIC(3,1),\n" + // NUMERIC type for popularity with 1 decimal place
+        "  \"time_needed\" NUMERIC(4,1),\n" + // NUMERIC type for time_needed with 1 decimal place
+        "  \"cost\" INTEGER,\n" + // INTEGER type for cost
+        "  \"difficulty\" INTEGER\n" + // INTEGER type for difficulty
+        ");\n" +
+        "CREATE INDEX ON \"Quests\" USING GIST (\"coordinates\");\n" + // PostGIS spatial index for coordinates
+        "CREATE INDEX ON \"Quests\" (\"creator_id\");\n" + // Index for creator_id
+        "CREATE INDEX ON \"Quests\" (\"city\");"; // Index for city
 
       // Execute the SQL query
       jdbc.execute(sqlQuery2);
@@ -57,7 +52,7 @@ public class DatabaseController {
 
     @PostMapping("/initquests")
     public String initializeQuestDatabase() {
-      String sqlQuery = String.format("INSERT INTO \"%s\".\"Quests\" (\"title\", \"description\", \"city\", \"coordinates\", \"tags\", \"creator_id\", \"time\")\n" + //
+      String sqlQuery = "INSERT INTO \"Quests\" (\"title\", \"description\", \"city\", \"coordinates\", \"tags\", \"creator_id\", \"time\")\n" + //
       "VALUES\n" + //
       "  ('LA Adventure', 'Explore the streets of LA! Experience the vibrant culture, street art, and eclectic neighborhoods of Los Angeles. Visit famous landmarks, discover hidden gems, and enjoy the lively atmosphere of this bustling city. Whether you are a foodie, a history buff, or an art lover, LA has something to offer everyone.', 'Los Angeles', ST_GeomFromText('POINT(34.0522 -118.2437)', 4326), '[\"adventure\", \"urban\", \"discovery\"]', 1, NOW()),\n" + //
       "  ('SD Beach Quest', 'Discover the hidden beaches of San Diego. Relax on pristine sands, explore secluded coves, and take in the stunning ocean views. Enjoy beachside activities, from surfing to sunbathing, and savor the local seafood. San Diego’s coastline offers a perfect mix of relaxation and adventure.', 'San Diego', ST_GeomFromText('POINT(32.7157 -117.1611)', 4326), '[\"beach\", \"water\", \"relaxation\"]', 2, NOW()),\n" + //
@@ -108,7 +103,7 @@ public class DatabaseController {
       "  ('Lake Tahoe Kayaking', 'Enjoy a kayaking adventure on Lake Tahoe. Paddle across the pristine waters, explore hidden coves, and take in the stunning alpine scenery. Kayaking is a great way to experience the lake’s natural beauty and tranquility.', 'Lake Tahoe', ST_GeomFromText('POINT(39.0968 -120.0324)', 4326), '[\"kayaking\", \"lake\", \"adventure\"]', 47, NOW()),\n" + //
       "  ('Big Bear Lake Hiking Trail', 'Hike one of the scenic trails around Big Bear Lake. Enjoy panoramic views of the lake and surrounding mountains, and immerse yourself in nature. The trails offer various levels of difficulty, making it suitable for hikers of all abilities.', 'Big Bear Lake', ST_GeomFromText('POINT(34.2438 -116.9182)', 4326), '[\"hiking\", \"lake\", \"nature\"]', 48, NOW()),\n" + //
       "  ('Palm Springs Desert Safari', 'Experience a desert safari in Palm Springs. Ride through the arid landscapes in a 4x4 vehicle, explore the unique desert flora and fauna, and enjoy breathtaking desert views. The safari provides an adventurous way to discover the desert’s natural beauty.', 'Palm Springs', ST_GeomFromText('POINT(33.8303 -116.5453)', 4326), '[\"safari\", \"desert\", \"adventure\"]', 49, NOW()),\n" + //
-      "  ('Yosemite Stargazing', 'Experience the magic of stargazing in Yosemite National Park. Observe the night sky from one of the park’s dark-sky areas, and learn about celestial objects and constellations. The stargazing experience offers a peaceful and awe-inspiring view of the universe.', 'Yosemite', ST_GeomFromText('POINT(37.8651 -119.5383)', 4326), '[\"stargazing\", \"nature\", \"night sky\"]', 50, NOW());\n", DB_NAME);
+      "  ('Yosemite Stargazing', 'Experience the magic of stargazing in Yosemite National Park. Observe the night sky from one of the park’s dark-sky areas, and learn about celestial objects and constellations. The stargazing experience offers a peaceful and awe-inspiring view of the universe.', 'Yosemite', ST_GeomFromText('POINT(37.8651 -119.5383)', 4326), '[\"stargazing\", \"nature\", \"night sky\"]', 50, NOW());\n";
 
         jdbc.execute(sqlQuery);
         return "good";

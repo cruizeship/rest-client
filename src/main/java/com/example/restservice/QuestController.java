@@ -10,13 +10,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.jar.Attributes.Name;
+import java.lang.Double;
+import java.lang.Number;
+import java.lang.Integer;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.client.RestTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,8 +48,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.restservice.envConfig;
 
 import com.example.restservice.VectorController;
 
@@ -52,9 +61,8 @@ public class QuestController {
   JdbcTemplate jdbc;
   ObjectMapper objectMapper = new ObjectMapper();
 
-  String DB_NAME = envConfig.getDB_NAME();
   // Remove backticks for PostgreSQL and replace ST_AsText with ST_AsEWKT for Well-known text
-  String baseQuery = String.format("SELECT id, title, description, city, ST_AsEWKT(coordinates) AS coordinates, tags, creator_id, time FROM %s.\"Quests\"", DB_NAME);
+  String baseQuery = "SELECT id, title, description, city, ST_X(coordinates) AS latitude, ST_Y(coordinates) AS longitude, creator_id, time, time_needed, difficulty FROM \"Quests\"";
 
   @GetMapping("/getallquests")
   public List<Map<String, Object>> getAllQuests() {
@@ -64,154 +72,190 @@ public class QuestController {
 
     return results;
   }
-  // search quests by different filters 
-  // search radius 
-  // search filters 
-  // semantic search term 
+  
   @PostMapping("/getquests")
-  public Object getQuests(@RequestBody Request request) {
-    
-    String queryEmbeddingString = VectorController.embedSearchQuery(request.getSearchQuery());
-    double latitude = request.getCoordinates()[1];
-    double longitude = request.getCoordinates()[0];
-    double radius = request.getRadius();
-    boolean sortTimeNeeded = request.getSortTimeNeeded();
-    boolean sortDifficulty = request.getSortDifficulty();
-    boolean sortPopularity = request.getSortPopularity();
-    boolean useSimilarityWeight = request.getUseSimilarityWeight();
-    double timeWeight = request.getTimeWeight();
-    double difficultyWeight = request.getDifficultyWeight();
-    double popularityWeight = request.getPopularityWeight();
-    double similarityWeight = request.getSimilarityWeight();
-    //double timeWeight = 1.0;
-    //double difficultyWeight = 1.0;
-    //double popularityWeight = 1.0;
-    //double similarityWeight = 1.0;
-    //System.out.println("Coordinates: " + latitude + ", " + longitude);
+  public Object getQuests(@RequestBody QuestRequest request) {
     try {
-      // Define the SQL query with placeholders for parameters
-      //Step 1: Query for similarity_cte
-      String sqlQuery = 
-        "WITH similarity_calculation AS (\n" +
-        "  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, \n" +
-        "    (title_embedding <=> ?::vector(768)) AS similarity\n" +
-        "  FROM sidequests.\"Quests\"\n" +
-        "  WHERE ST_DWithin(coordinates, ST_MakePoint(?, ?)::geography, ?)\n" +
-        "), \n" +
-        "scores AS (\n" +
-        "  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, similarity,\n" +
-        "    -- Time Score\n" +
-        "    CASE \n" +
-        "      WHEN time_needed IS NOT NULL AND ? THEN time_needed * ?\n" +
-        "      WHEN time_needed IS NOT NULL AND NOT ? THEN (50 - time_needed) * ?\n" +
-        "      ELSE 0 \n" +
-        "    END AS time_score,\n" +
-        "    -- Difficulty Score\n" +
-        "    CASE \n" +
-        "      WHEN difficulty IS NOT NULL AND ? THEN difficulty * ?\n" +
-        "      WHEN difficulty IS NOT NULL AND NOT ? THEN (5 - difficulty) * ?\n" +
-        "      ELSE 0\n" +
-        "    END AS difficulty_score,\n" +
-        "    -- Popularity Score\n" +
-        "    CASE \n" +
-        "      WHEN popularity IS NOT NULL AND ? THEN popularity * ?\n" +
-        "      WHEN popularity IS NOT NULL AND NOT ? THEN (10 - popularity) * ?\n" +
-        "      ELSE 0\n" +
-        "    END AS popularity_score,\n" +
-        "    -- Similarity Score\n" +
-        "    CASE \n" +
-        "      WHEN ? THEN (1 - similarity) * ?\n" +
-        "      ELSE 0\n" +
-        "    END AS similarity_score\n" +
-        "  FROM similarity_calculation\n" +
-        "), \n" +
-        "final_scores AS (\n" +
-        "  SELECT *,\n" +
-        "    (time_score + difficulty_score + popularity_score + similarity_score) AS weighted_score\n" +
-        "  FROM scores\n" +
-        ")\n" +
-        "SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, weighted_score, similarity_scor\n" +
-        "FROM final_scores\n" +
-        "ORDER BY weighted_score DESC";
-
-Object[] params = {
-    queryEmbeddingString, // 1: Embedding vector
-    longitude,            // 2: Longitude for location search
-    latitude,             // 3: Latitude for location search
-    radius,               // 4: Radius for location search
-    sortTimeNeeded,       // 5: Boolean for time_needed sorting
-    timeWeight,           // 6: Weight for time_needed
-    sortTimeNeeded,      // 7: Inverse boolean for low time_needed sorting
-    timeWeight,           // 8: Weight for time_needed
-    sortDifficulty,       // 9: Boolean for difficulty sorting
-    difficultyWeight,     // 10: Weight for difficulty
-    !sortDifficulty,      // 11: Inverse boolean for low difficulty sorting
-    difficultyWeight,     // 12: Weight for difficulty
-    sortPopularity,       // 13: Boolean for popularity sorting
-    popularityWeight,     // 14: Weight for popularity
-    !sortPopularity,      // 15: Inverse boolean for low popularity sorting
-    popularityWeight,     // 16: Weight for popularity
-    useSimilarityWeight,   // 17: Boolean for similarity weighting
-    similarityWeight      // 18: Weight for similarity
-};
+      String queryEmbeddingString = VectorController.embedSearchQuery(request.getSearchQuery());
+      double latitude = request.getLatitude();
+      double longitude = request.getLongitude();
+      double radius = request.getRadius();
+      List<Map<String, Object>> searchFilters = request.getSearchFilters();
+      ArrayList<Object> params = new ArrayList<>();
+      StringBuilder sqlQuery = new StringBuilder();
+      sqlQuery.append("WITH similarity_calculation AS (\n")
+              .append("  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city,\n")
+              .append("    (title_embedding <=> ?::vector(768)) AS similarity\n") // similarity based on embedding
+              .append("  FROM \"Quests\"\n")
+              .append("  WHERE ST_DWithin(coordinates, ST_MakePoint(?, ?)::geography, ?)\n") // location-based filtering
+              .append("), \n")
+              .append("scores AS (\n")
+              .append("  SELECT id, title, description, time_needed, difficulty, popularity, coordinates, time, city, similarity,\n");
       
-      return jdbc.queryForList(sqlQuery, params);
+      // Add the similarity filter param
+      params.add(queryEmbeddingString); // for vector embedding
+      params.add(latitude); // for ST_MakePoint longitude
+      params.add(longitude);  // for ST_MakePoint latitude
+      params.add(radius);    // for ST_DWithin radius
+      
+      // Dynamically generate scoring cases based on filters
+      for (Map<String, Object> filter : searchFilters) {
+          String filterName = (String) filter.get("filter");
+          Boolean ascending = (Boolean) filter.get("ascending");
+          Integer weight = (Integer) filter.get("weight");
+          
+          // Special handling for similarity score
+          if (filterName.equals("similarity")) {
+              sqlQuery.append("    CASE\n")
+                      .append("      WHEN ? THEN (1 - similarity) * ?\n")
+                      .append("      ELSE 0\n")
+                      .append("    END AS similarity_score,\n");
+              params.add(true);  // Flag to include similarity score
+              params.add(weight); // Similarity weight
+          } else {
+              sqlQuery.append("    -- ").append(filterName).append(" Score\n")
+                      .append("    CASE \n")
+                      .append("      WHEN ").append(filterName).append(" IS NOT NULL AND ? THEN ").append(filterName).append(" * ?\n")
+                      .append("      WHEN ").append(filterName).append(" IS NOT NULL AND NOT ?  THEN ").append(filterName).append(" * ?\n")
+                      .append("      ELSE 0 \n")
+                      .append("    END AS ").append(filterName).append("_score,\n");
+              
+              // Add parameters for dynamic query
+              params.add(ascending); 
+              params.add(weight);    
+              params.add(ascending); 
+              params.add(-1 * weight);    
+          }
+      }
 
-    
-    } catch (Exception e) {
-      e.printStackTrace();
-      return "Failed to query database: " + e.getMessage();
-    }
+      // Remove the trailing comma after the last CASE statement
+      if (sqlQuery.charAt(sqlQuery.length() - 2) == ',') {
+          sqlQuery.setLength(sqlQuery.length() - 2);
+      }
+
+      sqlQuery.append("\n  FROM similarity_calculation\n), \n")
+              .append("final_scores AS (\n")
+              .append("  SELECT *,\n")
+              .append("    (");
+
+      // Add weighted score calculation
+      boolean first = true;
+      for (Map<String, Object> filter : searchFilters) {
+          String filterName = (String) filter.get("filter");
+          if (first) {
+              sqlQuery.append(filterName).append("_score");
+              first = false;
+          } else {
+              sqlQuery.append(" + ").append(filterName).append("_score");
+          }
+      }
+
+      sqlQuery.append(") AS weighted_score\n")
+              .append("  FROM scores\n)\n")
+              .append("SELECT id, title, description, time_needed, difficulty, popularity, ST_X(coordinates) AS latitude, ST_Y(coordinates) AS longitude,  time, city, weighted_score\n")
+              .append("FROM final_scores\n")
+              .append("ORDER BY weighted_score DESC");
+
+      // Execute the dynamically generated query
+      System.out.println(sqlQuery.toString());
+      for (Object param : params) {
+          System.out.println(param);
+      }
+      List<Map<String, Object>> results = jdbc.queryForList(sqlQuery.toString(), params.toArray());
+      System.out.println(results);
+      return results;
   }
+    catch (Exception e) {
+    e.printStackTrace();
+    return "Failed to query database: " + e.getMessage();
+  }
+}
 
   @PostMapping("/createquest")
-  public Object createQuest(@RequestBody Request request) {
+  public Object createQuest(@RequestBody QuestRequest request) {
 
     int id = -1;
 
     try {
-      double latitude = request.getCoordinates()[1];
-      double longitude = request.getCoordinates()[0];
-      double creator_id = request.getCreatorId();
+      double latitude = request.getLatitude();
+      double longitude = request.getLongitude();
       String city = request.getCity();
+      Integer creator_id = request.getCreatorId();
       String description = request.getDescription();
       String title = request.getTitle();
-      String[] tags = request.getTags();
+      Integer difficulty = request.getDifficulty();
+      Double timeNeeded = request.getTimeNeeded();
 
-      // Convert tags array to JSON string directly in SQL preparation
-      String tagsJson = objectMapper.writeValueAsString(tags);
+      // calculate the city based on the latitude and longitude
+      
 
-      // PostgreSQL INSERT with ST_GeomFromText for spatial data
-      String sqlQuery = String.format(
-          "INSERT INTO %s.\"Quests\" " +
-              "(title, description, city, coordinates, tags, creator_id, time) " +
-              "VALUES (?, ?, ?, ST_GeomFromText('POINT(%f %f)', 4326), ?, ?, NOW())",
-          DB_NAME, latitude, longitude);
+      RestTemplate restTemplate = new RestTemplate();
+      String pythonServiceUrl = "http://localhost:5000/embed";
 
-      KeyHolder keyHolder = new GeneratedKeyHolder();
+      // Create the headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.set("Content-Type", "application/json");
 
-      jdbc.update(
-          connection -> {
-            PreparedStatement ps = connection.prepareStatement(sqlQuery, new String[] { "id" });
-            ps.setString(1, title);
-            ps.setString(2, description);
-            ps.setString(3, city);
-            ps.setString(4, tagsJson);
-            ps.setDouble(5, creator_id);
-            return ps;
-          },
-          keyHolder);
+      // Prepare the search text to be sent to the Python API
+      Map<String, Object> requestBody = new HashMap<>();
+      Map<Integer, String> idTitleMap = new HashMap<>();
+      idTitleMap.put(0, description);
+      requestBody.put("idTitleMap", idTitleMap);  // Only one entry in the list
 
-      // Retrieve the generated ID
-      Number generatedId = keyHolder.getKey();
-      id = generatedId.intValue();
+      // Convert requestBody to JSON string
+      String requestBodyJson = new JSONObject(requestBody).toString();
+      System.out.println(requestBodyJson);
+      // Send the request to the Python service
+      HttpEntity<String> embedRequest = new HttpEntity<>(requestBodyJson, headers);
+      System.out.println(embedRequest);
+      ResponseEntity<String> response;
 
-    } catch (Exception e) {
-      e.printStackTrace();
-      return "Failed to add quest: " + e.getMessage();
-    }
+      response = restTemplate.exchange(pythonServiceUrl, HttpMethod.POST, embedRequest, String.class);
 
-    return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
+      JSONObject responseJson = new JSONObject(response.getBody());
+          JSONObject idEmbeddingsJson = responseJson.getJSONObject("idEmbeddings");
+
+          if (idEmbeddingsJson.length() != 1) {
+              return "Unexpected number of embeddings received from Python service.";
+          }
+
+          // Extract the single search embedding
+          String searchId = idEmbeddingsJson.keys().next();
+          JSONArray searchEmbedding = idEmbeddingsJson.getJSONArray(searchId);
+          String searchEmbeddingString = searchEmbedding.toString();
+
+            // PostgreSQL INSERT with ST_GeomFromText for spatial data
+            String sqlQuery = "INSERT INTO \"Quests\" " +
+            "(title, title_embedding, description, city, coordinates, creator_id, time, difficulty, time_needed) " +
+            "VALUES (?, ?::vector(768), ?, ?, ST_GeomFromText(?, 4326), ?, NOW(), ?, ?)";
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbc.update(
+            connection -> {
+                PreparedStatement ps = connection.prepareStatement(sqlQuery, new String[] { "id" });
+                ps.setString(1, title);
+                ps.setString(2, searchEmbeddingString);
+                ps.setString(3, description);
+                ps.setString(4, city);
+                // Format the coordinates into WKT (Well-Known Text) for POINT.
+                ps.setString(5, String.format("POINT(%f %f)", latitude, longitude));
+                ps.setInt(6, creator_id);
+                ps.setInt(7, difficulty);
+                ps.setDouble(8, timeNeeded);
+                return ps;
+            },
+            keyHolder);
+
+
+          // Retrieve the generated ID
+          Number generatedId = keyHolder.getKey();
+          id = generatedId.intValue();
+          return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
+      
+      } catch (Exception e) {
+          e.printStackTrace();
+          return "Failed to connect to Python service.";
+      }
   }
-
 }
