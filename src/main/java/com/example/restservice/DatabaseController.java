@@ -27,7 +27,7 @@ public class DatabaseController {
         "CREATE EXTENSION IF NOT EXISTS vector;\n" +
         "CREATE TABLE \"Quests\" (\n" +
         "  \"id\" SERIAL PRIMARY KEY,\n" + // SERIAL will auto-increment the primary key
-        "  \"title\" VARCHAR(50) NOT NULL,\n" +
+        "  \"title\" VARCHAR(50) NOT NULL UNIQUE,\n" +
         "  \"titleEmbedded\" BOOLEAN DEFAULT FALSE,\n" +
         "  \"title_embedding\" vector(768),\n" + // Assuming a vector extension for embeddings
         "  \"description\" TEXT NOT NULL,\n" + // TEXT type for description
