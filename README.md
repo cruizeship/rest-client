@@ -7,6 +7,10 @@
 
 Runs the backend at [localhost:8080](http://localhost:8080)
 
+### `python gen_embeddings.py`
+
+Start the python service in another terminal window
+
 ## API Specs
 
 Available at [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
