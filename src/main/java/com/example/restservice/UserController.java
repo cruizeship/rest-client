@@ -160,12 +160,16 @@ public class UserController {
       String username = request.get("username") != null ? request.get("username") : "";
       String password = request.get("password") != null ? request.get("password") : "";
       String sqlQuery = baseQuery;
-      if (username == "") {
+      
+      if (username.equals("") && !email.equals("")) {
         sqlQuery += " WHERE email = '" + email + "';";
-      } else if (email == "") {
+      } else if (email.equals("") && !username.equals("")) {
         sqlQuery += " WHERE username = '" + username + "';";
       } else {
-        return ResponseEntity.status(400).body(Map.of("message", "Invalid input"));
+        return ResponseEntity.status(400).body(Map.of("message", "Missing username/email"));
+      }
+      if (password.equals("")) {
+        return ResponseEntity.status(400).body(Map.of("message", "Missing password"));
       }
 
       // Find the user by email

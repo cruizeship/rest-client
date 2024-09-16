@@ -174,8 +174,6 @@ public class QuestController {
   @PostMapping("/createquest")
   public Object createQuest(@RequestBody QuestRequest request) {
 
-    int id = -1;
-
     try {
       double latitude = request.getLatitude();
       double longitude = request.getLongitude();
@@ -186,72 +184,7 @@ public class QuestController {
       Integer difficulty = request.getDifficulty();
       Double timeNeeded = request.getTimeNeeded();
 
-      // calculate the city based on the latitude and longitude
-      
-
-      RestTemplate restTemplate = new RestTemplate();
-      String pythonServiceUrl = "http://localhost:5000/embed";
-
-      // Create the headers
-      HttpHeaders headers = new HttpHeaders();
-      headers.set("Content-Type", "application/json");
-
-      // Prepare the search text to be sent to the Python API
-      Map<String, Object> requestBody = new HashMap<>();
-      Map<Integer, String> idTitleMap = new HashMap<>();
-      idTitleMap.put(0, description);
-      requestBody.put("idTitleMap", idTitleMap);  // Only one entry in the list
-
-      // Convert requestBody to JSON string
-      String requestBodyJson = new JSONObject(requestBody).toString();
-      System.out.println(requestBodyJson);
-      // Send the request to the Python service
-      HttpEntity<String> embedRequest = new HttpEntity<>(requestBodyJson, headers);
-      System.out.println(embedRequest);
-      ResponseEntity<String> response;
-
-      response = restTemplate.exchange(pythonServiceUrl, HttpMethod.POST, embedRequest, String.class);
-
-      JSONObject responseJson = new JSONObject(response.getBody());
-          JSONObject idEmbeddingsJson = responseJson.getJSONObject("idEmbeddings");
-
-          if (idEmbeddingsJson.length() != 1) {
-              return "Unexpected number of embeddings received from Python service.";
-          }
-
-          // Extract the single search embedding
-          String searchId = idEmbeddingsJson.keys().next();
-          JSONArray searchEmbedding = idEmbeddingsJson.getJSONArray(searchId);
-          String searchEmbeddingString = searchEmbedding.toString();
-
-            // PostgreSQL INSERT with ST_GeomFromText for spatial data
-            String sqlQuery = "INSERT INTO \"Quests\" " +
-            "(title, title_embedding, description, city, coordinates, creator_id, time, difficulty, time_needed) " +
-            "VALUES (?, ?::vector(768), ?, ?, ST_GeomFromText(?, 4326), ?, NOW(), ?, ?)";
-
-            KeyHolder keyHolder = new GeneratedKeyHolder();
-
-            jdbc.update(
-            connection -> {
-                PreparedStatement ps = connection.prepareStatement(sqlQuery, new String[] { "id" });
-                ps.setString(1, title);
-                ps.setString(2, searchEmbeddingString);
-                ps.setString(3, description);
-                ps.setString(4, city);
-                // Format the coordinates into WKT (Well-Known Text) for POINT.
-                ps.setString(5, String.format("POINT(%f %f)", latitude, longitude));
-                ps.setInt(6, creator_id);
-                ps.setInt(7, difficulty);
-                ps.setDouble(8, timeNeeded);
-                return ps;
-            },
-            keyHolder);
-
-
-          // Retrieve the generated ID
-          Number generatedId = keyHolder.getKey();
-          id = generatedId.intValue();
-          return QuestHelper.extractData(baseQuery + " WHERE id = " + id, jdbc).get(0);
+      return QuestHelper.createQuest(latitude, longitude, city, creator_id, description, title, difficulty, timeNeeded, jdbc);
       
       } catch (Exception e) {
           e.printStackTrace();
